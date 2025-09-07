@@ -1,0 +1,13 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\DriftOS.App",
+    "\\DriftOS.Core",
+    "\\DriftOS.Core\\IO",
+    "\\DriftOS.Input",
+    "\\DriftOS.Input\\XInput",
+    "\\Settings"
+  ],
+  "SelectedNode": "\\DriftOS.App\\App.xaml.cs",
+  "PreviewInSolutionExplorer": false
+}
