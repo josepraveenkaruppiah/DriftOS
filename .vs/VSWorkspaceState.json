@@ -10,6 +10,6 @@
     "\\DriftOS.Input",
     "\\DriftOS.Input\\XInput"
   ],
-  "SelectedNode": "\\DriftOS.App\\App.xaml.cs",
+  "SelectedNode": "\\DriftOS.App\\TrayIconService.cs",
   "PreviewInSolutionExplorer": false
 }

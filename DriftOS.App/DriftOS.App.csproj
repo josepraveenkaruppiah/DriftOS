@@ -6,11 +6,19 @@
 		<UseWindowsForms>true</UseWindowsForms>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
+
+		<!-- Use the same icon for the EXE -->
+		<ApplicationIcon>Assets\app.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\DriftOS.Core\DriftOS.Core.csproj" />
 		<ProjectReference Include="..\DriftOS.Input\DriftOS.Input.csproj" />
+	</ItemGroup>
+
+	<!-- Mark the icon as a WPF Resource so pack://application works -->
+	<ItemGroup>
+		<Resource Include="Assets\app.ico" />
 	</ItemGroup>
 
 	<ItemGroup>
