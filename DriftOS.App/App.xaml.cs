@@ -1,20 +1,23 @@
 ﻿using System;
 using System.IO;
-using System.Windows;
+using System.Windows;                 // WPF
 using DriftOS.Core.Settings;
-using DriftOS.Core.IO;          // OK to use Core
-using DriftOS.Input.XInput;     // OK to use Input
+using DriftOS.Core.IO;
+using DriftOS.Input.XInput;
 using Serilog;
 
 namespace DriftOS.App;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     public static ISettingsStore SettingsStore { get; private set; } = null!;
     public static SettingsModel Settings { get; private set; } = null!;
 
     private XInputPoller? _poller;
     private IMouseOutput? _mouse;
+
+    private TrayIconService? _tray;   // <-- add this
+    private bool _enabled = true;     // <-- and this
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -35,6 +38,8 @@ public partial class App : Application
 
         _poller.OnState += (lx, ly, buttons) =>
         {
+            if (!_enabled) return;
+
             var dz = (float)Math.Clamp(Settings.Deadzone, 0.0, 0.30);
             var mag = MathF.Sqrt(lx * lx + ly * ly);
             if (mag < dz) return;
@@ -47,8 +52,24 @@ public partial class App : Application
 
             _mouse!.Move(dx, dy);
         };
-
         _poller.Start();
+
+        // Tray:
+        _tray = new TrayIconService(enabled: _enabled);
+        _tray.ShowInfo("DriftOS", "Tray running. Right-click me!");
+
+        _tray.ToggleEnableRequested += () =>
+        {
+            _enabled = !_enabled;
+            _tray!.SetEnabled(_enabled);
+            _tray.ShowInfo("DriftOS", _enabled ? "Controller as mouse: ON" : "Controller as mouse: OFF");
+        };
+        _tray.OpenSettingsRequested += () =>
+        {
+            var win = new SettingsWindow();
+            win.Show();
+        };
+        _tray.ExitRequested += () => Shutdown();
 
         base.OnStartup(e);
         Log.Information("DriftOS started. Sensitivity={Sens} Deadzone={Dz}",
@@ -61,6 +82,7 @@ public partial class App : Application
         {
             _poller?.Dispose();
             SettingsStore.Save(Settings);
+            _tray?.Dispose();
         }
         finally { Log.CloseAndFlush(); }
 

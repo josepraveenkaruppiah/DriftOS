@@ -1,0 +1,15 @@
+using System.Reflection;
+using System.Windows; // for Application.GetResourceStream
+
+// ...
+var iconStream = Application.GetResourceStream(
+    new Uri("pack://application:,,,/Assets/app.ico"))?.Stream;
+var icon = iconStream != null ? new System.Drawing.Icon(iconStream) : SystemIcons.Application;
+
+_notifyIcon = new WF.NotifyIcon
+{
+    Visible = true,
+    Text = "DriftOS",
+    Icon = icon,
+    ContextMenuStrip = new WF.ContextMenuStrip()
+};

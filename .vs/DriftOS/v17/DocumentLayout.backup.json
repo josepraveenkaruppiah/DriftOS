@@ -7,10 +7,6 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DriftOS.App\\App.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\DriftOS.App\\App.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DriftOS.App\\App.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\DriftOS.Core\\IO\\SendInputMouseOutput.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DriftOS.Core\\IO\\SendInputMouseOutput.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -19,16 +15,12 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DriftOS.Core\\IO\\IMouseOutput.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\DriftOS.App\\SettingsWindow.xaml||{8B382828-6202-11D1-8870-0000F87579D2}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DriftOS.App\\SettingsWindow.xaml||{8B382828-6202-11D1-8870-0000F87579D2}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\DriftOS.App\\MainWindow.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DriftOS.App\\MainWindow.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\DriftOS.App\\SettingsWindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DriftOS.App\\SettingsWindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\DriftOS.App\\SettingsWindow.xaml||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DriftOS.App\\SettingsWindow.xaml||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\DriftOS.App\\DriftOS.App.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
@@ -37,6 +29,10 @@
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\.github\\workflows\\ci.yml||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.github\\workflows\\ci.yml||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\DriftOS.App\\App.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DriftOS.App\\App.xaml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\DriftOS\\DriftOS.App\\TrayIconService.cs||{8B382828-6202-11D1-8870-0000F87579D2}",
@@ -82,19 +78,58 @@
       "DocumentGroups": [
         {
           "DockedHeight": 257,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
               "DocumentIndex": 3,
+              "Title": "SettingsWindow.xaml.cs",
+              "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\SettingsWindow.xaml.cs",
+              "RelativeDocumentMoniker": "DriftOS.App\\SettingsWindow.xaml.cs",
+              "ToolTip": "D:\\DriftOS\\DriftOS.App\\SettingsWindow.xaml.cs",
+              "RelativeToolTip": "DriftOS.App\\SettingsWindow.xaml.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAiwBAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-09T04:38:24.344Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "IMouseOutput.cs",
               "DocumentMoniker": "D:\\DriftOS\\DriftOS.Core\\IO\\IMouseOutput.cs",
               "RelativeDocumentMoniker": "DriftOS.Core\\IO\\IMouseOutput.cs",
               "ToolTip": "D:\\DriftOS\\DriftOS.Core\\IO\\IMouseOutput.cs",
               "RelativeToolTip": "DriftOS.Core\\IO\\IMouseOutput.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAeAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-09-07T20:31:11.145Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "SendInputMouseOutput.cs",
+              "DocumentMoniker": "D:\\DriftOS\\DriftOS.Core\\IO\\SendInputMouseOutput.cs",
+              "RelativeDocumentMoniker": "DriftOS.Core\\IO\\SendInputMouseOutput.cs",
+              "ToolTip": "D:\\DriftOS\\DriftOS.Core\\IO\\SendInputMouseOutput.cs",
+              "RelativeToolTip": "DriftOS.Core\\IO\\SendInputMouseOutput.cs",
+              "ViewState": "AgIAAAIAAAAAAAAAAAAmwCkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-07T20:31:44.659Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "App.xaml.cs",
+              "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\App.xaml.cs",
+              "RelativeDocumentMoniker": "DriftOS.App\\App.xaml.cs",
+              "ToolTip": "D:\\DriftOS\\DriftOS.App\\App.xaml.cs",
+              "RelativeToolTip": "DriftOS.App\\App.xaml.cs",
+              "ViewState": "AgIAACQAAAAAAAAAAAAIwEoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-07T19:10:29.623Z",
               "EditorCaption": ""
             },
             {
@@ -112,20 +147,46 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "SendInputMouseOutput.cs",
-              "DocumentMoniker": "D:\\DriftOS\\DriftOS.Core\\IO\\SendInputMouseOutput.cs",
-              "RelativeDocumentMoniker": "DriftOS.Core\\IO\\SendInputMouseOutput.cs",
-              "ToolTip": "D:\\DriftOS\\DriftOS.Core\\IO\\SendInputMouseOutput.cs",
-              "RelativeToolTip": "DriftOS.Core\\IO\\SendInputMouseOutput.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-07T20:31:44.659Z",
+              "DocumentIndex": 6,
+              "Title": "ci.yml",
+              "DocumentMoniker": "D:\\DriftOS\\.github\\workflows\\ci.yml",
+              "RelativeDocumentMoniker": ".github\\workflows\\ci.yml",
+              "ToolTip": "D:\\DriftOS\\.github\\workflows\\ci.yml",
+              "RelativeToolTip": ".github\\workflows\\ci.yml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003775|",
+              "WhenOpened": "2025-09-09T04:25:39.816Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 8,
+              "Title": "TrayIconService.cs",
+              "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\TrayIconService.cs",
+              "RelativeDocumentMoniker": "DriftOS.App\\TrayIconService.cs",
+              "ToolTip": "D:\\DriftOS\\DriftOS.App\\TrayIconService.cs",
+              "RelativeToolTip": "DriftOS.App\\TrayIconService.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAmwDIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-09T03:45:22.052Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "app.ico",
+              "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\Assets\\app.ico",
+              "RelativeDocumentMoniker": "DriftOS.App\\Assets\\app.ico",
+              "ToolTip": "D:\\DriftOS\\DriftOS.App\\Assets\\app.ico",
+              "RelativeToolTip": "DriftOS.App\\Assets\\app.ico",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001525|",
+              "WhenOpened": "2025-09-09T03:35:00.325Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
               "Title": "App.xaml",
               "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\App.xaml",
               "RelativeDocumentMoniker": "DriftOS.App\\App.xaml",
@@ -138,81 +199,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "App.xaml.cs",
-              "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\App.xaml.cs",
-              "RelativeDocumentMoniker": "DriftOS.App\\App.xaml.cs",
-              "ToolTip": "D:\\DriftOS\\DriftOS.App\\App.xaml.cs",
-              "RelativeToolTip": "DriftOS.App\\App.xaml.cs",
-              "ViewState": "AgIAAE8AAAAAAAAAAAAAAFsAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-07T19:10:29.623Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 5,
-              "Title": "MainWindow.xaml",
-              "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\MainWindow.xaml",
-              "RelativeDocumentMoniker": "DriftOS.App\\MainWindow.xaml",
-              "ToolTip": "D:\\DriftOS\\DriftOS.App\\MainWindow.xaml",
-              "RelativeToolTip": "DriftOS.App\\MainWindow.xaml",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2025-09-09T05:05:33.259Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "SettingsWindow.xaml.cs",
-              "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\SettingsWindow.xaml.cs",
-              "RelativeDocumentMoniker": "DriftOS.App\\SettingsWindow.xaml.cs",
-              "ToolTip": "D:\\DriftOS\\DriftOS.App\\SettingsWindow.xaml.cs",
-              "RelativeToolTip": "DriftOS.App\\SettingsWindow.xaml.cs",
-              "ViewState": "AgIAAAYAAAAAAAAAAAAiwBAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-09T04:38:24.344Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "ci.yml",
-              "DocumentMoniker": "D:\\DriftOS\\.github\\workflows\\ci.yml",
-              "RelativeDocumentMoniker": ".github\\workflows\\ci.yml",
-              "ToolTip": "D:\\DriftOS\\.github\\workflows\\ci.yml",
-              "RelativeToolTip": ".github\\workflows\\ci.yml",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003775|",
-              "WhenOpened": "2025-09-09T04:25:39.816Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "TrayIconService.cs",
-              "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\TrayIconService.cs",
-              "RelativeDocumentMoniker": "DriftOS.App\\TrayIconService.cs",
-              "ToolTip": "D:\\DriftOS\\DriftOS.App\\TrayIconService.cs",
-              "RelativeToolTip": "DriftOS.App\\TrayIconService.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAmwDIAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-09T03:45:22.052Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "app.ico",
-              "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\Assets\\app.ico",
-              "RelativeDocumentMoniker": "DriftOS.App\\Assets\\app.ico",
-              "ToolTip": "D:\\DriftOS\\DriftOS.App\\Assets\\app.ico",
-              "RelativeToolTip": "DriftOS.App\\Assets\\app.ico",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001525|",
-              "WhenOpened": "2025-09-09T03:35:00.325Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
               "Title": "DriftOS.App.csproj",
               "DocumentMoniker": "D:\\DriftOS\\DriftOS.App\\DriftOS.App.csproj",
               "RelativeDocumentMoniker": "DriftOS.App\\DriftOS.App.csproj",
@@ -220,11 +207,12 @@
               "RelativeToolTip": "DriftOS.App\\DriftOS.App.csproj",
               "ViewState": "AgIAAAwAAAAAAAAAAAAAwBUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-09-09T03:18:18.401Z"
+              "WhenOpened": "2025-09-09T03:18:18.401Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 10,
               "Title": "XInputPoller.cs",
               "DocumentMoniker": "D:\\DriftOS\\DriftOS.Input\\XInput\\XInputPoller.cs",
               "RelativeDocumentMoniker": "DriftOS.Input\\XInput\\XInputPoller.cs",
@@ -232,11 +220,12 @@
               "RelativeToolTip": "DriftOS.Input\\XInput\\XInputPoller.cs",
               "ViewState": "AgIAAAEAAAAAAAAAAAAuwDQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-07T20:30:35.78Z"
+              "WhenOpened": "2025-09-07T20:30:35.78Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 11,
               "Title": "XinputNative.cs",
               "DocumentMoniker": "D:\\DriftOS\\DriftOS.Input\\XInput\\XinputNative.cs",
               "RelativeDocumentMoniker": "DriftOS.Input\\XInput\\XinputNative.cs",
@@ -244,11 +233,12 @@
               "RelativeToolTip": "DriftOS.Input\\XInput\\XinputNative.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-07T20:30:10.515Z"
+              "WhenOpened": "2025-09-07T20:30:10.515Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 12,
               "Title": "JsonSettingsStore.cs",
               "DocumentMoniker": "D:\\DriftOS\\Settings\\JsonSettingsStore.cs",
               "RelativeDocumentMoniker": "Settings\\JsonSettingsStore.cs",
@@ -256,11 +246,12 @@
               "RelativeToolTip": "Settings\\JsonSettingsStore.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-07T18:54:21.418Z"
+              "WhenOpened": "2025-09-07T18:54:21.418Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 13,
               "Title": "ISettingsStore.cs",
               "DocumentMoniker": "D:\\DriftOS\\Settings\\ISettingsStore.cs",
               "RelativeDocumentMoniker": "Settings\\ISettingsStore.cs",
@@ -268,11 +259,12 @@
               "RelativeToolTip": "Settings\\ISettingsStore.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-07T18:53:26.669Z"
+              "WhenOpened": "2025-09-07T18:53:26.669Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 14,
               "Title": "SettingsModel.cs",
               "DocumentMoniker": "D:\\DriftOS\\Settings\\SettingsModel.cs",
               "RelativeDocumentMoniker": "Settings\\SettingsModel.cs",
@@ -280,11 +272,12 @@
               "RelativeToolTip": "Settings\\SettingsModel.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-07T18:51:14.865Z"
+              "WhenOpened": "2025-09-07T18:51:14.865Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 15,
               "Title": "DriftOS.Input.csproj",
               "DocumentMoniker": "D:\\DriftOS\\DriftOS.Input\\DriftOS.Input.csproj",
               "RelativeDocumentMoniker": "DriftOS.Input\\DriftOS.Input.csproj",
@@ -292,11 +285,12 @@
               "RelativeToolTip": "DriftOS.Input\\DriftOS.Input.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-09-07T18:47:32.654Z"
+              "WhenOpened": "2025-09-07T18:47:32.654Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 16,
               "Title": "DriftOS.Core.csproj",
               "DocumentMoniker": "D:\\DriftOS\\DriftOS.Core\\DriftOS.Core.csproj",
               "RelativeDocumentMoniker": "DriftOS.Core\\DriftOS.Core.csproj",
@@ -304,7 +298,8 @@
               "RelativeToolTip": "DriftOS.Core\\DriftOS.Core.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-09-07T18:47:25.854Z"
+              "WhenOpened": "2025-09-07T18:47:25.854Z",
+              "EditorCaption": ""
             }
           ]
         },
