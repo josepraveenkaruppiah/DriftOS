@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
-// NOTE: we DO NOT import System.Windows here to avoid "Application" ambiguity
+// keep WPF Application fully-qualified to avoid ambiguity
 using WF = System.Windows.Forms;
 
 namespace DriftOS.App;
@@ -36,7 +36,10 @@ public sealed class TrayIconService : IDisposable
         };
         _notifyIcon.ContextMenuStrip.Items.AddRange(new WF.ToolStripItem[]
         {
-            _toggleItem, new WF.ToolStripSeparator(), settingsItem, exitItem
+            _toggleItem,
+            new WF.ToolStripSeparator(),
+            settingsItem,
+            exitItem
         });
     }
 
@@ -47,20 +50,18 @@ public sealed class TrayIconService : IDisposable
 
     private Icon? LoadAppIcon()
     {
-        // Try WPF pack resource first (requires <Resource Include="Assets\app.ico" /> in csproj)
         try
         {
             var uri = new Uri("pack://application:,,,/Assets/app.ico", UriKind.Absolute);
-            var sri = System.Windows.Application.GetResourceStream(uri); // fully-qualified WPF Application
+            var sri = System.Windows.Application.GetResourceStream(uri);
             if (sri?.Stream != null)
             {
                 _icon = new Icon(sri.Stream);
                 return _icon;
             }
         }
-        catch { /* fall through to EXE icon */ }
+        catch { /* fall through */ }
 
-        // Fallback: use the EXE's associated icon (requires <ApplicationIcon>Assets\app.ico</ApplicationIcon>)
         try
         {
             var exePath = Process.GetCurrentProcess().MainModule?.FileName;

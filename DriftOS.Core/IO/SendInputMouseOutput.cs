@@ -14,13 +14,20 @@ public sealed class SendInputMouseOutput : IMouseOutput
     private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct INPUT { public uint type; public MOUSEINPUT mi; }
+    private struct INPUT
+    {
+        public uint type;
+        public MOUSEINPUT mi;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct MOUSEINPUT
     {
-        public int dx, dy;
-        public uint mouseData, dwFlags, time;
+        public int dx;
+        public int dy;
+        public uint mouseData;
+        public uint dwFlags;
+        public uint time;
         public IntPtr dwExtraInfo;
     }
 
@@ -29,9 +36,22 @@ public sealed class SendInputMouseOutput : IMouseOutput
 
     private static void Send(uint flags, int dx = 0, int dy = 0)
     {
-        var input = new INPUT { type = INPUT_MOUSE, mi = new MOUSEINPUT { dx = dx, dy = dy, dwFlags = flags } };
+        var input = new INPUT
+        {
+            type = INPUT_MOUSE,
+            mi = new MOUSEINPUT
+            {
+                dx = dx,
+                dy = dy,
+                dwFlags = flags
+            }
+        };
         SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>());
     }
 
     public void Move(int dx, int dy) => Send(MOUSEEVENTF_MOVE, dx, dy);
+    public void LeftDown() => Send(MOUSEEVENTF_LEFTDOWN);
+    public void LeftUp() => Send(MOUSEEVENTF_LEFTUP);
+    public void RightDown() => Send(MOUSEEVENTF_RIGHTDOWN);
+    public void RightUp() => Send(MOUSEEVENTF_RIGHTUP);
 }
