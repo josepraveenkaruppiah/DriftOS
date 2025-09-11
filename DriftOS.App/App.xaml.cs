@@ -19,119 +19,106 @@ public partial class App : System.Windows.Application
     private IMouseOutput? _mouse;
     private TrayIconService? _tray;
 
-    // Master enable from tray
     private bool _enabled = true;
+    private bool _latchedMode = false;
+    private bool _rbDown = false;
+    private bool _injectPrev = false;
 
-    // RB toggle (latched mouse mode)
-    private bool _latchedMode = false;      // toggled on RB release
-    private bool _rbDown = false;           // RB currently held
-    private bool _injectPrev = false;      // previous "injecting?" state
-
-    // Track what we pressed (to avoid stuck clicks)
     private bool _isLeftDown = false;
     private bool _isRightDown = false;
 
-    // Pointer movement (left stick): time-based + smoothing
+    // Pointer movement
     private long _lastTicks = 0;
-    private double _filtVx = 0, _filtVy = 0;    // filtered px/sec
-    private double _accumX = 0, _accumY = 0;    // sub-pixel accumulators
-    private const double MaxStepPx = 18;        // per-frame clamp
+    private double _filtVx = 0, _filtVy = 0;
+    private double _accumX = 0, _accumY = 0;
+    private const double MaxStepPx = 18;
 
-    // Right-stick smooth scrolling: filtered notches/sec + accumulators
+    // Scrolling
     private long _lastScrollTicks = 0;
-    private double _filtSv = 0, _filtSh = 0;    // filtered notches/sec (vertical/horizontal)
-    private double _accSv = 0, _accSh = 0;    // accumulated notches to emit
+    private double _filtSv = 0, _filtSh = 0;
+    private double _accSv = 0, _accSh = 0;
     private const int WheelDelta = 120;
 
     private ushort _prevButtons = 0;
 
-    // single-instance
     private Mutex? _singleInstanceMutex;
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // ---------- Single-instance guard ----------
+        // Single-instance guard
         bool createdNew;
-        _singleInstanceMutex = new Mutex(initiallyOwned: true, name: @"Global\DriftOS_SingleInstance", out createdNew);
+        _singleInstanceMutex = new Mutex(true, @"Global\DriftOS_SingleInstance", out createdNew);
         if (!createdNew)
         {
-            System.Windows.MessageBox.Show(
-                "DriftOS is already running.", "DriftOS",
+            System.Windows.MessageBox.Show("DriftOS is already running.", "DriftOS",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
         }
 
-        // ---------- Logging ----------
+        // Logging
         var logsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "DriftOS", "logs", "driftos-.log");
-
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Async(a => a.File(logsPath, rollingInterval: RollingInterval.Day))
             .CreateLogger();
 
-        // ---------- Settings ----------
+        // Settings
         SettingsStore = new JsonSettingsStore();
         Settings = SettingsStore.Load();
 
-        // ---------- IO + poller ----------
+        // Migration / sane defaults
+        if (Settings.PointerSpeed <= 0) Settings.PointerSpeed = Settings.Sensitivity > 0 ? Settings.Sensitivity : 1.0;
+        if (Settings.ScrollSpeedV <= 0) Settings.ScrollSpeedV = Settings.PointerSpeed;
+        if (Settings.ScrollSpeedH <= 0) Settings.ScrollSpeedH = Settings.PointerSpeed;
+        if (Settings.PointerAlpha <= 0) Settings.PointerAlpha = 0.35;
+        if (Settings.ScrollAlpha <= 0) Settings.ScrollAlpha = 0.50;
+        if (Settings.ScrollGamma <= 0) Settings.ScrollGamma = 1.60;
+
         _mouse = new SendInputMouseOutput();
         _poller = new XInputPoller(hz: 120);
 
-        // Extended poller event: (lx, ly, rx, ry, buttons)
         _poller.OnStateEx += (lx, ly, rx, ry, buttons) =>
         {
-            // Button masks (define once)
-            const ushort RB = 0x0200; // Right bumper -> toggle
-            const ushort A = 0x1000; // A -> left click
-            const ushort B = 0x2000; // B -> right click
+            const ushort RB = 0x0200;
+            const ushort A = 0x1000;
+            const ushort B = 0x2000;
             const ushort DPAD_UP = 0x0001;
             const ushort DPAD_DOWN = 0x0002;
             const ushort DPAD_LEFT = 0x0004;
             const ushort DPAD_RIGHT = 0x0008;
 
-            // ---- RB toggle on RELEASE ----
+            // RB toggle on release
             bool rbNow = (buttons & RB) != 0;
             bool rbWas = (_prevButtons & RB) != 0;
-
             if (rbNow && !rbWas) _rbDown = true;
             else if (!rbNow && rbWas)
             {
                 if (_rbDown)
                 {
                     _latchedMode = !_latchedMode;
-                    _tray?.ShowInfo("DriftOS",
-                        _latchedMode ? "Mouse mode ON (RB toggle)" : "Mouse mode OFF");
+                    _tray?.ShowInfo("DriftOS", _latchedMode ? "Mouse mode ON (RB toggle)" : "Mouse mode OFF");
                 }
                 _rbDown = false;
             }
 
-            // Decide injection based on BOTH master enable and latched mode
             bool injectNow = _enabled && _latchedMode;
 
-            // Transitions: OFF → release & clear; ON → reset timebases/integrators
+            // Transitions
             if (!injectNow && _injectPrev)
             {
                 if (_isLeftDown) { try { _mouse!.LeftUp(); } catch { } _isLeftDown = false; }
                 if (_isRightDown) { try { _mouse!.RightUp(); } catch { } _isRightDown = false; }
-                _accumX = _accumY = 0;
-                _filtVx = _filtVy = 0;
-
-                _filtSv = _filtSh = 0;
-                _accSv = _accSh = 0;
-                _lastScrollTicks = 0;
+                _accumX = _accumY = 0; _filtVx = _filtVy = 0;
+                _filtSv = _filtSh = 0; _accSv = _accSh = 0; _lastScrollTicks = 0;
             }
             else if (injectNow && !_injectPrev)
             {
                 _lastTicks = Stopwatch.GetTimestamp();
-                _accumX = _accumY = 0;
-                _filtVx = _filtVy = 0;
-
-                _filtSv = _filtSh = 0;
-                _accSv = _accSh = 0;
-                _lastScrollTicks = _lastTicks;
+                _accumX = _accumY = 0; _filtVx = _filtVy = 0;
+                _filtSv = _filtSh = 0; _accSv = _accSh = 0; _lastScrollTicks = _lastTicks;
             }
             _injectPrev = injectNow;
 
@@ -141,7 +128,7 @@ public partial class App : System.Windows.Application
                 return;
             }
 
-            // ===================== Pointer: left stick =====================
+            // ---------------- Pointer (left stick) ----------------
             double dz = Math.Clamp(Settings.Deadzone, 0.0, 0.30);
             double mag = Math.Sqrt(lx * lx + ly * ly);
 
@@ -152,50 +139,38 @@ public partial class App : System.Windows.Application
                 _lastTicks = nowTicks;
 
                 double scaled = (mag - dz) / (1.0 - dz);
-                double curved = scaled * scaled * scaled;  // cubic easing
-                double basePps = 900.0;                    // tweak 700–1100
-                double pps = basePps * Settings.Sensitivity;
+                double curved = scaled * scaled * scaled;
+                double pps = 900.0 * Settings.PointerSpeed;
 
-                double ux = (mag == 0 ? 0.0 : lx / mag);
-                double uy = (mag == 0 ? 0.0 : ly / mag);
+                double ux = lx / mag;
+                double uy = ly / mag;
 
                 double targetVx = ux * curved * pps;
                 double targetVy = -uy * curved * pps;
 
-                // Zero-cross snap: kill inertia on instant reversals
-                if (_filtVx != 0 && targetVx != 0 && Math.Sign(_filtVx) != Math.Sign(targetVx))
-                { _filtVx = 0; _accumX = 0; }
-                if (_filtVy != 0 && targetVy != 0 && Math.Sign(_filtVy) != Math.Sign(targetVy))
-                { _filtVy = 0; _accumY = 0; }
-
-                const double alpha = 0.35; // smoothing (0..1)
-                _filtVx += alpha * (targetVx - _filtVx);
-                _filtVy += alpha * (targetVy - _filtVy);
+                double alphaPtr = Math.Clamp(Settings.PointerAlpha, 0.05, 0.95);
+                if (_filtVx != 0 && targetVx != 0 && Math.Sign(_filtVx) != Math.Sign(targetVx)) { _filtVx = 0; _accumX = 0; }
+                if (_filtVy != 0 && targetVy != 0 && Math.Sign(_filtVy) != Math.Sign(targetVy)) { _filtVy = 0; _accumY = 0; }
+                _filtVx += alphaPtr * (targetVx - _filtVx);
+                _filtVy += alphaPtr * (targetVy - _filtVy);
 
                 _accumX += _filtVx * dt;
                 _accumY += _filtVy * dt;
 
-                double stepX = Math.Truncate(Math.Clamp(_accumX, -MaxStepPx, MaxStepPx));
-                double stepY = Math.Truncate(Math.Clamp(_accumY, -MaxStepPx, MaxStepPx));
-
-                int dx = (int)stepX;
-                int dy = (int)stepY;
-
+                int dx = (int)Math.Truncate(Math.Clamp(_accumX, -MaxStepPx, MaxStepPx));
+                int dy = (int)Math.Truncate(Math.Clamp(_accumY, -MaxStepPx, MaxStepPx));
                 if (dx != 0 || dy != 0)
                 {
-                    _accumX -= dx;
-                    _accumY -= dy;
+                    _accumX -= dx; _accumY -= dy;
                     _mouse!.Move(dx, dy);
                 }
             }
             else
             {
-                // Inside deadzone: drop velocity & remainder so no carry-through
-                _filtVx = _filtVy = 0;
-                _accumX = _accumY = 0;
+                _filtVx = _filtVy = 0; _accumX = _accumY = 0;
             }
 
-            // ===================== Scrolling: right stick + D-pad =====================
+            // ---------------- Scrolling (right stick + D-pad) ----------------
             long nowS = Stopwatch.GetTimestamp();
             if (_lastScrollTicks == 0) _lastScrollTicks = nowS;
             double dtS = Math.Max(1e-3, (nowS - _lastScrollTicks) / (double)Stopwatch.Frequency);
@@ -203,68 +178,59 @@ public partial class App : System.Windows.Application
 
             double dzScroll = Math.Clamp(Settings.Deadzone, 0.0, 0.30);
 
-            // Right-stick analog contribution
+            // Right-stick analog
             double rmag = Math.Sqrt(rx * rx + ry * ry);
             double sx = 0, sy = 0;
             if (rmag >= dzScroll)
             {
-                double scaled = (rmag - dzScroll) / (1.0 - dzScroll);   // 0..1
-                double ux = rx / rmag;
-                double uy = ry / rmag;
-                sx = ux * scaled;     // [-1..1]
-                sy = uy * scaled;
+                double scaledS = (rmag - dzScroll) / (1.0 - dzScroll);
+                sx = (rx / rmag) * scaledS;
+                sy = (ry / rmag) * scaledS;
             }
 
-            // D-pad digital contribution
+            // D-pad digital
             int dV = ((buttons & DPAD_UP) != 0 ? +1 : 0) + ((buttons & DPAD_DOWN) != 0 ? -1 : 0);
             int dH = ((buttons & DPAD_RIGHT) != 0 ? +1 : 0) + ((buttons & DPAD_LEFT) != 0 ? -1 : 0);
 
-            // Combine (up = positive vertical scroll, right = positive horizontal)
-            double vDrive = (-sy) + dV;  // invert Y: stick up → scroll up
-            double hDrive = (sx) + dH;
+            // Combined drives
+            double vDrive = (-sy) + dV; // up = positive
+            double hDrive = (sx) + dH; // right = positive
+            vDrive = Math.Clamp(vDrive, -1, 1);
+            hDrive = Math.Clamp(hDrive, -1, 1);
 
-            // Clamp to avoid spikes when mixing inputs
-            vDrive = Math.Max(-1, Math.Min(1, vDrive));
-            hDrive = Math.Max(-1, Math.Min(1, hDrive));
-
-            // Shape: shallower power → stronger mid-stick (less laggy)
-            const double gammaS = 1.6;
+            double gammaS = Math.Clamp(Settings.ScrollGamma, 1.0, 2.5);
             double driveV = Math.Sign(vDrive) * Math.Pow(Math.Abs(vDrive), gammaS);
             double driveH = Math.Sign(hDrive) * Math.Pow(Math.Abs(hDrive), gammaS);
 
-            // Target notch rates
-            double baseV = 18.0 * Settings.Sensitivity; // vertical notches/sec
-            double baseH = 16.0 * Settings.Sensitivity; // horizontal
+            double baseV = 18.0 * Settings.ScrollSpeedV;
+            double baseH = 16.0 * Settings.ScrollSpeedH;
             double targetSv = driveV * baseV;
             double targetSh = driveH * baseH;
 
-            // Zero-cross snap (scroll)
+            if (Settings.InvertScrollV) targetSv = -targetSv;
+            if (Settings.InvertScrollH) targetSh = -targetSh;
+
             if (_filtSv != 0 && targetSv != 0 && Math.Sign(_filtSv) != Math.Sign(targetSv)) { _filtSv = 0; _accSv = 0; }
             if (_filtSh != 0 && targetSh != 0 && Math.Sign(_filtSh) != Math.Sign(targetSh)) { _filtSh = 0; _accSh = 0; }
 
-            // Snappier EMA
-            const double alphaS = 0.50;
+            double alphaS = Math.Clamp(Settings.ScrollAlpha, 0.05, 0.95);
             _filtSv += alphaS * (targetSv - _filtSv);
             _filtSh += alphaS * (targetSh - _filtSh);
 
-            // Integrate filtered notches/sec → notches
             _accSv += _filtSv * dtS;
             _accSh += _filtSh * dtS;
 
-            // Emit whole notches (sign-aware)
             while (_accSv >= 1.0) { _mouse!.Scroll(+WheelDelta); _accSv -= 1.0; }
             while (_accSv <= -1.0) { _mouse!.Scroll(-WheelDelta); _accSv += 1.0; }
             while (_accSh >= 1.0) { _mouse!.HScroll(+WheelDelta); _accSh -= 1.0; }
             while (_accSh <= -1.0) { _mouse!.HScroll(-WheelDelta); _accSh += 1.0; }
 
-            // If both analog + digital are idle and inside dz: stop residual motion
             if (rmag < dzScroll && dV == 0 && dH == 0)
             {
-                _filtSv = _filtSh = 0;
-                _accSv = _accSh = 0;
+                _filtSv = _filtSh = 0; _accSv = _accSh = 0;
             }
 
-            // ===================== Clicks (A/B) =====================
+            // Clicks
             bool aNow = (buttons & A) != 0;
             if (aNow && !_isLeftDown) { _mouse!.LeftDown(); _isLeftDown = true; }
             if (!aNow && _isLeftDown) { _mouse!.LeftUp(); _isLeftDown = false; }
@@ -278,14 +244,13 @@ public partial class App : System.Windows.Application
 
         _poller.Start();
 
-        // ---------- Tray ----------
+        // Tray
         _tray = new TrayIconService(enabled: _enabled);
-        _tray.ShowInfo("DriftOS", "Press RB to toggle mouse mode (right stick scroll)");
+        _tray.ShowInfo("DriftOS", "RB toggles mouse mode · Right stick scroll");
 
         _tray.ToggleEnableRequested += () =>
         {
             bool wasInjecting = _enabled && _latchedMode;
-
             _enabled = !_enabled;
             _tray!.SetEnabled(_enabled);
 
@@ -293,11 +258,8 @@ public partial class App : System.Windows.Application
             {
                 if (_isLeftDown) { try { _mouse!.LeftUp(); } catch { } _isLeftDown = false; }
                 if (_isRightDown) { try { _mouse!.RightUp(); } catch { } _isRightDown = false; }
-                _accumX = _accumY = 0;
-                _filtVx = _filtVy = 0;
-                _filtSv = _filtSh = 0;
-                _accSv = _accSh = 0;
-                _lastScrollTicks = 0;
+                _accumX = _accumY = 0; _filtVx = _filtVy = 0;
+                _filtSv = _filtSh = 0; _accSv = _accSh = 0; _lastScrollTicks = 0;
                 _injectPrev = false;
                 _tray.ShowInfo("DriftOS", "Controller as mouse: OFF");
             }
@@ -305,25 +267,33 @@ public partial class App : System.Windows.Application
             {
                 _tray.ShowInfo("DriftOS", _enabled ? "Controller as mouse: ON" : "Controller as mouse: OFF");
             }
-
             Log.Information("Master enable toggled → {Enabled}", _enabled);
         };
 
         _tray.OpenSettingsRequested += () =>
         {
-            var win = new SettingsWindow();
-            win.Show();
+            try
+            {
+                var win = new SettingsWindow();
+                win.Show();
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Failed to open SettingsWindow");
+                System.Windows.MessageBox.Show(ex.ToString(), "Settings error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         };
 
         _tray.ExitRequested += () => Shutdown();
 
-        // init timebases
         _lastTicks = Stopwatch.GetTimestamp();
         _lastScrollTicks = _lastTicks;
 
         base.OnStartup(e);
-        Log.Information("DriftOS started. Sensitivity={Sens} Deadzone={Dz}",
-            Settings.Sensitivity, Settings.Deadzone);
+        Log.Information("DriftOS started. PS={PS} SV={SV} SH={SH} DZ={DZ} αp={PA} αs={SA} γ={SG}",
+            Settings.PointerSpeed, Settings.ScrollSpeedV, Settings.ScrollSpeedH, Settings.Deadzone,
+            Settings.PointerAlpha, Settings.ScrollAlpha, Settings.ScrollGamma);
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -333,15 +303,10 @@ public partial class App : System.Windows.Application
             _poller?.Dispose();
             SettingsStore.Save(Settings);
             _tray?.Dispose();
-
             try { _singleInstanceMutex?.ReleaseMutex(); } catch { }
             _singleInstanceMutex?.Dispose();
         }
-        finally
-        {
-            Log.CloseAndFlush();
-        }
-
+        finally { Log.CloseAndFlush(); }
         base.OnExit(e);
     }
 }

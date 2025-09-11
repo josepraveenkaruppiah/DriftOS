@@ -1,50 +1,158 @@
-<Window x:Class="DriftOS.App.SettingsWindow"
+﻿<Window x:Class="DriftOS.App.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="DriftOS Settings" Height="260" Width="460"
+        Title="DriftOS Settings" Height="520" Width="520" MinHeight="420"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize" Icon="Assets/app.ico"
-        Background="#0F1115" Foreground="#EDEFF2">
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        ResizeMode="CanMinimize"
+        Background="#0F1115" Foreground="#EDEFF2"
+        UseLayoutRounding="True" SnapsToDevicePixels="True">
 
-        <!-- Sensitivity -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,18">
-            <TextBlock Text="Pointer &amp; Scroll Sensitivity" FontSize="16" Margin="0,0,0,6"/>
-            <DockPanel>
-                <Slider Minimum="0.2" Maximum="2.0" TickFrequency="0.1" IsSnapToTickEnabled="False"
-                Value="{Binding Sensitivity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                Width="360"/>
-                <TextBlock Text="{Binding Sensitivity, StringFormat=F2}" Width="60" HorizontalAlignment="Right" Margin="8,0,0,0"/>
-            </DockPanel>
-            <TextBlock Text="Scales cursor speed and scroll rate. 1.00 = default." FontSize="12" Opacity="0.7" Margin="0,4,0,0"/>
-        </StackPanel>
+    <Window.Resources>
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#EDEFF2"/>
+        </Style>
+        <Style TargetType="GroupBox">
+            <Setter Property="Foreground" Value="#EDEFF2"/>
+        </Style>
+    </Window.Resources>
 
-        <!-- Deadzone -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,18">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="16" >
+
+            <!-- Pointer speed -->
+            <TextBlock Text="Pointer Speed" FontSize="16" Margin="0,0,0,6"/>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <Slider Grid.Column="0"
+                Minimum="0.30" Maximum="2.50" TickFrequency="0.05"
+                Value="{Binding PointerSpeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Column="1"
+                   Text="{Binding PointerSpeed, Mode=OneWay, StringFormat={}{0:F2}}"
+                   FontFamily="Consolas" TextAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Text="Scales cursor speed. 1.00 = default." FontSize="12" Opacity="0.7" Margin="0,0,0,10"/>
+
+            <!-- Scroll speeds -->
+            <TextBlock Text="Scroll Speeds (Right Stick + D-pad)" FontSize="16" Margin="0,6,0,6"/>
+            <!-- Vertical -->
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="100"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Vertical" VerticalAlignment="Center" Opacity="0.8"/>
+                <Slider Grid.Column="1"
+                Minimum="0.30" Maximum="2.50" TickFrequency="0.05"
+                Value="{Binding ScrollSpeedV, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Column="2"
+                   Text="{Binding DisplayScrollSpeedV, Mode=OneWay}"
+                   FontFamily="Consolas" TextAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- Horizontal -->
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="100"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Horizontal" VerticalAlignment="Center" Opacity="0.8"/>
+                <Slider Grid.Column="1"
+                Minimum="0.30" Maximum="2.50" TickFrequency="0.05"
+                Value="{Binding ScrollSpeedH, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Column="2"
+                   Text="{Binding DisplayScrollSpeedH, Mode=OneWay}"
+                   FontFamily="Consolas" TextAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- Invert + deadzone -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                <CheckBox Content="Invert Vertical Scroll"
+                  IsChecked="{Binding InvertScrollV, Mode=TwoWay}"
+                  Margin="0,0,16,0"/>
+                <CheckBox Content="Invert Horizontal Scroll"
+                  IsChecked="{Binding InvertScrollH, Mode=TwoWay}"/>
+            </StackPanel>
+
+            <!-- Deadzone -->
             <TextBlock Text="Stick Deadzone" FontSize="16" Margin="0,0,0,6"/>
-            <DockPanel>
-                <Slider Minimum="0.00" Maximum="0.30" TickFrequency="0.01" IsSnapToTickEnabled="False"
-                Value="{Binding Deadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                Width="360"/>
-                <TextBlock Text="{Binding Deadzone, StringFormat=F3}" Width="60" HorizontalAlignment="Right" Margin="8,0,0,0"/>
-            </DockPanel>
-            <TextBlock Text="Ignore tiny stick movement near center. Higher = more stable, less responsive." FontSize="12" Opacity="0.7" Margin="0,4,0,0"/>
-        </StackPanel>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="100" />
+                </Grid.ColumnDefinitions>
+                <Slider Grid.Column="0"
+                Minimum="0.00" Maximum="0.30" TickFrequency="0.01"
+                Value="{Binding Deadzone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Grid.Column="1"
+                   Text="{Binding Deadzone, Mode=OneWay, StringFormat={}{0:F3}}"
+                   FontFamily="Consolas" TextAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+            <TextBlock Text="Ignore tiny stick movement near center. Higher = more stable, less responsive."
+                 FontSize="12" Opacity="0.7" Margin="0,0,0,10"/>
 
-        <!-- Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Restore Defaults" Margin="0,0,8,0" Padding="10,6"
-              Click="OnRestoreDefaults"/>
-            <Button Content="Save" Margin="0,0,8,0" Padding="14,6"
-              Click="OnSave"/>
-            <Button Content="Close" Padding="14,6"
-              Click="OnClose"/>
+            <!-- Advanced -->
+            <GroupBox Header="Advanced (Smoothing &amp; Curve)" Padding="10" Margin="0,0,0,14" BorderBrush="#2a2f3a">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Pointer Smoothing α" VerticalAlignment="Center" Opacity="0.8"/>
+                        <Slider Grid.Column="1"
+                    Minimum="0.10" Maximum="0.90" TickFrequency="0.01"
+                    Value="{Binding PointerAlpha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Column="2"
+                       Text="{Binding PointerAlpha, Mode=OneWay, StringFormat={}{0:F2}}"
+                       FontFamily="Consolas" TextAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Scroll Smoothing α" VerticalAlignment="Center" Opacity="0.8"/>
+                        <Slider Grid.Column="1"
+                    Minimum="0.10" Maximum="0.90" TickFrequency="0.01"
+                    Value="{Binding ScrollAlpha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Column="2"
+                       Text="{Binding ScrollAlpha, Mode=OneWay, StringFormat={}{0:F2}}"
+                       FontFamily="Consolas" TextAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Scroll Curve γ" VerticalAlignment="Center" Opacity="0.8"/>
+                        <Slider Grid.Column="1"
+                    Minimum="1.00" Maximum="2.50" TickFrequency="0.05"
+                    Value="{Binding ScrollGamma, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Column="2"
+                       Text="{Binding ScrollGamma, Mode=OneWay, StringFormat={}{0:F2}}"
+                       FontFamily="Consolas" TextAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Buttons -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Restore Defaults" Margin="0,0,8,0" Padding="10,6" Click="OnRestoreDefaults"/>
+                <Button Content="Save" Margin="0,0,8,0" Padding="14,6" Click="OnSave"/>
+                <Button Content="Close" Padding="14,6" Click="OnClose"/>
+            </StackPanel>
+
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </Window>
