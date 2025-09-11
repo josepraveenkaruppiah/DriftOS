@@ -58,7 +58,7 @@ Click **Save** to persist to `config.json` (path is confirmed in a toast and log
 
 **Using CLI**
 ```powershell
-git clone https://github.com/<your-username>/DriftOS.git
+git clone https://github.com/josepraveenkaruppiah/DriftOS.git
 cd DriftOS
 dotnet build
 dotnet run -p .\DriftOS.App
