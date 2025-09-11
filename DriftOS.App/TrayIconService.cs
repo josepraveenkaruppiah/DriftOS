@@ -1,7 +1,6 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Drawing;
-// keep WPF Application fully-qualified to avoid ambiguity
 using WF = System.Windows.Forms;
 
 namespace DriftOS.App;
@@ -10,7 +9,8 @@ public sealed class TrayIconService : IDisposable
 {
     private readonly WF.NotifyIcon _notifyIcon;
     private readonly WF.ToolStripMenuItem _toggleItem;
-    private Icon? _icon; // keep a ref so GC doesn't collect it
+    private readonly WF.ToolStripMenuItem _autostartItem;   // <── NEW
+    private Icon? _icon;
 
     public event Action? ToggleEnableRequested;
     public event Action? OpenSettingsRequested;
@@ -21,7 +21,22 @@ public sealed class TrayIconService : IDisposable
         _toggleItem = new WF.ToolStripMenuItem(enabled ? "Disable" : "Enable");
         _toggleItem.Click += (_, __) => ToggleEnableRequested?.Invoke();
 
-        var settingsItem = new WF.ToolStripMenuItem("Settings�");
+        _autostartItem = new WF.ToolStripMenuItem("Start with Windows")   // <── NEW
+        {
+            Checked = AutoStart.IsEnabled(),
+            CheckOnClick = true
+        };
+        _autostartItem.CheckedChanged += (_, __) =>                      // <── NEW
+        {
+            try { AutoStart.SetEnabled(_autostartItem.Checked); }
+            catch (Exception ex)
+            {
+                _autostartItem.Checked = !_autostartItem.Checked;
+                WF.MessageBox.Show($"Failed to change autostart:\n{ex.Message}", "DriftOS");
+            }
+        };
+
+        var settingsItem = new WF.ToolStripMenuItem("Settings…");
         settingsItem.Click += (_, __) => OpenSettingsRequested?.Invoke();
 
         var exitItem = new WF.ToolStripMenuItem("Exit");
@@ -37,6 +52,7 @@ public sealed class TrayIconService : IDisposable
         _notifyIcon.ContextMenuStrip.Items.AddRange(new WF.ToolStripItem[]
         {
             _toggleItem,
+            _autostartItem,                          // <── NEW
             new WF.ToolStripSeparator(),
             settingsItem,
             exitItem

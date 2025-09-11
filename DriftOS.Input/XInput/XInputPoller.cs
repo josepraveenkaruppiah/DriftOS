@@ -1,52 +1,90 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 
-namespace DriftOS.Input.XInput;
-
-public sealed class XInputPoller : IDisposable
+namespace DriftOS.Input.XInput
 {
-    private readonly int _index;
-    private readonly int _hz;
-    private CancellationTokenSource? _cts;
-
-    // Normalized left-stick (-1..+1). Buttons are raw bitfield.
-    public event Action<float, float, ushort>? OnState;
-
-    public XInputPoller(int index = 0, int hz = 120)
+    public sealed class XInputPoller : IDisposable
     {
-        _index = index;
-        _hz = Math.Clamp(hz, 30, 240);
-    }
+        public event Action<double, double, ushort>? OnState;                                   // (lx, ly, buttons)
+        public event Action<double, double, double, double, ushort>? OnStateEx;                 // (lx, ly, rx, ry, buttons)
 
-    public void Start()
-    {
-        if (_cts != null) return;
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
+        private readonly int _periodMs;
+        private Thread? _thread;
+        private volatile bool _running;
 
-        Task.Run(async () =>
+        public XInputPoller(int hz = 120)
         {
-            var period = TimeSpan.FromMilliseconds(1000.0 / _hz);
-            while (!token.IsCancellationRequested)
+            _periodMs = Math.Max(1, (int)Math.Round(1000.0 / Math.Max(1, hz)));
+        }
+
+        public void Start()
+        {
+            if (_running) return;
+            _running = true;
+            _thread = new Thread(PollLoop) { IsBackground = true, Name = "XInputPoller" };
+            _thread.Start();
+        }
+
+        public void Dispose()
+        {
+            _running = false;
+            try { _thread?.Join(250); } catch { /* ignore */ }
+        }
+
+        private static double Norm(short v)
+        {
+            // map [-32768..32767] to [-1..1]
+            double n = v / 32767.0;
+            if (n < -1) n = -1;
+            if (n > 1) n = 1;
+            return n;
+        }
+
+        private void PollLoop()
+        {
+            while (_running)
             {
-                if (XInputNative.TryGetState(_index, out var st))
+                XINPUT_STATE state;
+                uint rc = XInputGetState(0, out state);
+                if (rc == 0)
                 {
-                    float lx = Math.Clamp(st.Gamepad.sThumbLX / 32767f, -1f, 1f);
-                    float ly = Math.Clamp(st.Gamepad.sThumbLY / 32767f, -1f, 1f);
-                    OnState?.Invoke(lx, ly, st.Gamepad.wButtons);
+                    var gp = state.Gamepad;
+                    double lx = Norm(gp.sThumbLX);
+                    double ly = Norm(gp.sThumbLY);
+                    double rx = Norm(gp.sThumbRX);
+                    double ry = Norm(gp.sThumbRY);
+                    ushort buttons = gp.wButtons;
+
+                    OnState?.Invoke(lx, ly, buttons);
+                    OnStateEx?.Invoke(lx, ly, rx, ry, buttons);
                 }
-                try { await Task.Delay(period, token); }
-                catch { /* canceled */ }
+                Thread.Sleep(_periodMs);
             }
-        }, token);
-    }
+        }
 
-    public void Stop()
-    {
-        _cts?.Cancel();
-        _cts = null;
-    }
+        #region P/Invoke
+        [DllImport("xinput1_4.dll", EntryPoint = "XInputGetState", ExactSpelling = true)]
+        private static extern uint XInputGetState(uint dwUserIndex, out XINPUT_STATE pState);
 
-    public void Dispose() => Stop();
+        [StructLayout(LayoutKind.Sequential)]
+        private struct XINPUT_STATE
+        {
+            public uint dwPacketNumber;
+            public XINPUT_GAMEPAD Gamepad;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct XINPUT_GAMEPAD
+        {
+            public ushort wButtons;
+            public byte bLeftTrigger;
+            public byte bRightTrigger;
+            public short sThumbLX;
+            public short sThumbLY;
+            public short sThumbRX;
+            public short sThumbRY;
+        }
+        #endregion
+    }
 }
