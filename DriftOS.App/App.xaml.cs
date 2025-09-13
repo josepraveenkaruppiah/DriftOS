@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Diagnostics;   // Stopwatch
+using System.Diagnostics;   // Stopwatch, Process
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;     // Mutex
 using System.Windows;       // WPF
-using System.Runtime.InteropServices;
 using System.Windows.Interop; // HwndSource
 using DriftOS.Core.IO;
 using DriftOS.Core.Settings;
@@ -49,6 +49,9 @@ public partial class App : System.Windows.Application
     // Single-instance guard
     private Mutex? _singleInstanceMutex;
 
+    // LB (touch keyboard) debounce
+    private long _lastKbTicks = 0;
+
     // ===== Global Hotkey support (Ctrl+Shift+F10) =====
     private IntPtr _hotkeyHwnd = IntPtr.Zero;
     private HwndSource? _hotkeySource;
@@ -58,13 +61,27 @@ public partial class App : System.Windows.Application
 
     [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
     [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
     private const uint MOD_ALT = 0x0001, MOD_CONTROL = 0x0002, MOD_SHIFT = 0x0004, MOD_WIN = 0x0008;
     private const uint VK_F10 = 0x79;
 
+    // ===== COM for TabTip (touch keyboard) =====
+    [ComImport, Guid("37C994E7-432B-401B-91B1-63F5E5674A1F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface ITipInvocation { void Toggle(IntPtr hwnd); }
+    [ComImport, Guid("4CE576FA-83DC-4f88-951C-9D0782B4E376")]
+    private class TipInvocation { }
+
+    // ===== Win32 helpers for TabTip =====
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr FindWindow(string lpClassName, string? lpWindowName);
+    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    private const int SW_SHOW = 5;
+
     protected override void OnStartup(StartupEventArgs e)
     {
-        // ---- Single-instance guard (before anything heavy) ----
+        // ---- Single-instance guard ----
         bool createdNew;
         _singleInstanceMutex = new Mutex(true, @"Global\DriftOS_SingleInstance", out createdNew);
         if (!createdNew)
@@ -75,7 +92,7 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        // ---- Serilog to %APPDATA%\DriftOS\logs\driftos-YYYYMMDD.log ----
+        // ---- Serilog ----
         var logsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "DriftOS", "logs", "driftos-.log");
@@ -84,21 +101,17 @@ public partial class App : System.Windows.Application
             .WriteTo.Async(a => a.File(logsPath, rollingInterval: RollingInterval.Day))
             .CreateLogger();
 
-        var ver = typeof(App).Assembly.GetName().Version?.ToString() ?? "unknown";
-        Log.Information("DriftOS {Version} starting…", ver);
-        _tray?.ShowInfo("DriftOS", $"Started v{ver}");
-
-        // ---- Settings (load + migrate sane defaults) ----
+        // ---- Settings ----
         SettingsStore = new JsonSettingsStore();
         Settings = SettingsStore.Load();
-        AutoStart.Apply(Settings.AutoStart);
-
         if (Settings.PointerSpeed <= 0) Settings.PointerSpeed = Settings.Sensitivity > 0 ? Settings.Sensitivity : 1.0;
         if (Settings.ScrollSpeedV <= 0) Settings.ScrollSpeedV = Settings.PointerSpeed;
         if (Settings.ScrollSpeedH <= 0) Settings.ScrollSpeedH = Settings.PointerSpeed;
         if (Settings.PointerAlpha <= 0) Settings.PointerAlpha = 0.35;
         if (Settings.ScrollAlpha <= 0) Settings.ScrollAlpha = 0.50;
         if (Settings.ScrollGamma <= 0) Settings.ScrollGamma = 1.60;
+
+        try { AutoStart.Apply(Settings.AutoStart); } catch { }
 
         // ---- IO backends ----
         _mouse = new SendInputMouseOutput();
@@ -108,6 +121,7 @@ public partial class App : System.Windows.Application
         _poller.OnStateEx += (lx, ly, rx, ry, buttons) =>
         {
             const ushort RB = 0x0200;
+            const ushort LB = 0x0100; // Left bumper -> touch keyboard
             const ushort A = 0x1000;
             const ushort B = 0x2000;
             const ushort DPAD_UP = 0x0001;
@@ -129,12 +143,30 @@ public partial class App : System.Windows.Application
                 _rbDown = false;
             }
 
+            // LB → show/toggle touch keyboard on release (300ms debounce)
+            bool lbNow = (buttons & LB) != 0;
+            bool lbWas = (_prevButtons & LB) != 0;
+            if (!lbNow && lbWas)
+            {
+                long now = Stopwatch.GetTimestamp();
+                double since = (now - _lastKbTicks) / (double)Stopwatch.Frequency;
+                if (since > 0.30)
+                {
+                    // REPLACE THIS LINE:
+                    // ShowTouchKeyboard();  or Dispatcher.BeginInvoke(() => ShowTouchKeyboard());
+
+                    // WITH THIS:
+                    Dispatcher.BeginInvoke(new Action(TouchKeyboard.ShowOrToggle));
+
+                    _lastKbTicks = now;
+                }
+            }
+
             bool injectNow = _enabled && _latchedMode;
 
             // Transitions
             if (!injectNow && _injectPrev)
             {
-                // turning off: release any held buttons & reset integrators
                 if (_isLeftDown) { try { _mouse!.LeftUp(); } catch { } _isLeftDown = false; }
                 if (_isRightDown) { try { _mouse!.RightUp(); } catch { } _isRightDown = false; }
                 _accumX = _accumY = 0; _filtVx = _filtVy = 0;
@@ -142,7 +174,6 @@ public partial class App : System.Windows.Application
             }
             else if (injectNow && !_injectPrev)
             {
-                // turning on: reset timers/integrators
                 _lastTicks = Stopwatch.GetTimestamp();
                 _accumX = _accumY = 0; _filtVx = _filtVy = 0;
                 _filtSv = _filtSh = 0; _accSv = _accSh = 0; _lastScrollTicks = _lastTicks;
@@ -166,7 +197,7 @@ public partial class App : System.Windows.Application
                 _lastTicks = nowTicks;
 
                 double scaled = (mag - dz) / (1.0 - dz);
-                double curved = scaled * scaled * scaled;
+                double curved = Math.Pow(scaled, 3);
                 double pps = 900.0 * Settings.PointerSpeed;
 
                 double ux = lx / mag;
@@ -274,29 +305,7 @@ public partial class App : System.Windows.Application
         // ---- Tray ----
         _tray = new TrayIconService(enabled: _enabled);
         _tray.ShowInfo("DriftOS", "RB toggles mouse mode · Right stick scroll");
-
-        _tray.ToggleEnableRequested += () =>
-        {
-            bool wasInjecting = _enabled && _latchedMode;
-            _enabled = !_enabled;
-            _tray!.SetEnabled(_enabled);
-
-            if (wasInjecting && !_enabled)
-            {
-                if (_isLeftDown) { try { _mouse!.LeftUp(); } catch { } _isLeftDown = false; }
-                if (_isRightDown) { try { _mouse!.RightUp(); } catch { } _isRightDown = false; }
-                _accumX = _accumY = 0; _filtVx = _filtVy = 0;
-                _filtSv = _filtSh = 0; _accSv = _accSh = 0; _lastScrollTicks = 0;
-                _injectPrev = false;
-                _tray.ShowInfo("DriftOS", "Controller as mouse: OFF");
-            }
-            else
-            {
-                _tray.ShowInfo("DriftOS", _enabled ? "Controller as mouse: ON" : "Controller as mouse: OFF");
-            }
-            Log.Information("Master enable toggled → {Enabled}", _enabled);
-        };
-
+        _tray.ToggleEnableRequested += () => ToggleEnabledFromAnywhere();
         _tray.OpenSettingsRequested += () =>
         {
             try { new SettingsWindow().Show(); }
@@ -307,7 +316,6 @@ public partial class App : System.Windows.Application
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         };
-
         _tray.ExitRequested += () => Shutdown();
 
         // ---- Hotkey host window + registration ----
@@ -372,11 +380,9 @@ public partial class App : System.Windows.Application
     {
         try
         {
-            // Persist settings
             try { SettingsStore.Save(Settings); }
             catch (Exception ex) { Log.Warning(ex, "Save on exit failed"); }
 
-            // Unregister global hotkey
             if (_hotkeyHwnd != IntPtr.Zero)
             {
                 try { UnregisterHotKey(_hotkeyHwnd, HOTKEY_ID_TOGGLE); }
@@ -384,7 +390,6 @@ public partial class App : System.Windows.Application
                 _hotkeyHwnd = IntPtr.Zero;
             }
 
-            // Dispose message-only window
             if (_hotkeySource is not null)
             {
                 try { _hotkeySource.RemoveHook(WndProc); } catch { /* ignore */ }
@@ -397,5 +402,64 @@ public partial class App : System.Windows.Application
             Log.CloseAndFlush();
             base.OnExit(e);
         }
+    }
+
+    // ---- Touch keyboard launcher (COM TabTip preferred; no OSK fallback) ----
+    private void ShowTouchKeyboard()
+    {
+        // 1) COM toggle – pass the current foreground window (more reliable than IntPtr.Zero)
+        try
+        {
+            var inv = (ITipInvocation)new TipInvocation();
+            var hFg = GetForegroundWindow();
+            inv.Toggle(hFg != IntPtr.Zero ? hFg : _hotkeyHwnd);
+            Serilog.Log.Information("Touch keyboard: COM Toggle OK (hWnd={Handle})", hFg);
+            return;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Information("Touch keyboard: COM Toggle failed: {Msg}", ex.Message);
+        }
+
+        // 2) Launch TabTip.exe and attempt to surface its window
+        try
+        {
+            var common = Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles);
+            var tabtip = Path.Combine(common, "microsoft shared", "ink", "TabTip.exe");
+            if (File.Exists(tabtip))
+            {
+                Process.Start(new ProcessStartInfo(tabtip) { UseShellExecute = true });
+                Serilog.Log.Information("Touch keyboard: launched TabTip.exe");
+
+                // Wait briefly, then try to bring it to front if hidden
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    System.Threading.Thread.Sleep(600);
+                    var h = FindWindow("IPTip_Main_Window", null);
+                    if (h != IntPtr.Zero)
+                    {
+                        ShowWindow(h, SW_SHOW);
+                        SetForegroundWindow(h);
+                        Serilog.Log.Information("Touch keyboard: brought TabTip to foreground");
+                    }
+                    else
+                    {
+                        Serilog.Log.Warning("Touch keyboard: TabTip window not found after launch");
+                    }
+                });
+                return;
+            }
+            else
+            {
+                Serilog.Log.Warning("Touch keyboard: TabTip.exe not found");
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Warning(ex, "Touch keyboard: TabTip launch failed");
+        }
+
+        // No OSK fallback by request; just log.
+        Serilog.Log.Warning("Touch keyboard: unable to show TabTip (no OSK fallback)");
     }
 }
