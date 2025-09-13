@@ -62,3 +62,6 @@ git clone https://github.com/josepraveenkaruppiah/DriftOS.git
 cd DriftOS
 dotnet build
 dotnet run -p .\DriftOS.App
+
+## ⬇️ Download
+Grab the latest from [Releases](../../releases) — use **Self-contained (win-x64)** if you’re not sure.
