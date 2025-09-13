@@ -91,6 +91,8 @@ public partial class App : System.Windows.Application
         // ---- Settings (load + migrate sane defaults) ----
         SettingsStore = new JsonSettingsStore();
         Settings = SettingsStore.Load();
+        AutoStart.Apply(Settings.AutoStart);
+
         if (Settings.PointerSpeed <= 0) Settings.PointerSpeed = Settings.Sensitivity > 0 ? Settings.Sensitivity : 1.0;
         if (Settings.ScrollSpeedV <= 0) Settings.ScrollSpeedV = Settings.PointerSpeed;
         if (Settings.ScrollSpeedH <= 0) Settings.ScrollSpeedH = Settings.PointerSpeed;
