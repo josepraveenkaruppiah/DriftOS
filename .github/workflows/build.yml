@@ -1,0 +1,32 @@
+name: build
+on: { push: { branches: [main] }, pull_request: { branches: [main] } }
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '8.0.x' }
+      - run: dotnet restore
+      - run: dotnet build -c Release --no-restore
+      - name: Publish (fdp)
+        run: > 
+          dotnet publish .\DriftOS.App -c Release -r win-x64
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          --self-contained false -o .\publish\fdp-win-x64
+      - name: Publish (self-contained)
+        run: >
+          dotnet publish .\DriftOS.App -c Release -r win-x64
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:PublishTrimmed=false --self-contained true -o .\publish\sc-win-x64
+      - name: Zip artifacts
+        shell: pwsh
+        run: |
+          Compress-Archive -Path .\publish\fdp-win-x64\* -DestinationPath .\publish\DriftOS-fdp-win-x64.zip
+          Compress-Archive -Path .\publish\sc-win-x64\*  -DestinationPath .\publish\DriftOS-sc-win-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: driftos-${{ github.sha }}
+          path: |
+            publish/DriftOS-fdp-win-x64.zip
+            publish/DriftOS-sc-win-x64.zip
