@@ -84,6 +84,10 @@ public partial class App : System.Windows.Application
             .WriteTo.Async(a => a.File(logsPath, rollingInterval: RollingInterval.Day))
             .CreateLogger();
 
+        var ver = typeof(App).Assembly.GetName().Version?.ToString() ?? "unknown";
+        Log.Information("DriftOS {Version} starting…", ver);
+        _tray?.ShowInfo("DriftOS", $"Started v{ver}");
+
         // ---- Settings (load + migrate sane defaults) ----
         SettingsStore = new JsonSettingsStore();
         Settings = SettingsStore.Load();
