@@ -1,31 +1,41 @@
-﻿# Visual Studio
-.vs/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-# VS caches
-*.db
-*.db-shm
-*.db-wal
-*.vsidx
-
-# Build outputs
+# Build output
 bin/
 obj/
 [Bb]uild/
 [Ll]og/
-*.log
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.userprefs
+*.VC.db
+*.VC.opendb
+
+# Rider / JetBrains
+.idea/
 
 # NuGet
 *.nupkg
+*.snupkg
 packages/
-.nuget/
+project.lock.json
+artifacts/
 
-# OS
+# Publish / temp
+publish/
+*.publish.xml
+*.Publish.xml
+*.pubxml
+*.pubxml.user
+
+# OS cruft
 .DS_Store
 Thumbs.db
 
-# JetBrains (optional)
-.idea/
-*.iml
+# Logs
+*.log
+logs/
+DriftOS.App/Logs/
