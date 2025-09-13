@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;     // Mutex
 using System.Windows;       // WPF
 using System.Windows.Interop; // HwndSource
+
 using DriftOS.Core.IO;
 using DriftOS.Core.Settings;
 using DriftOS.Input.XInput;
@@ -25,7 +26,7 @@ public partial class App : System.Windows.Application
 
     // ----- State -----
     private bool _enabled = true;      // master enable
-    private bool _latchedMode = false; // RB toggle state
+    private bool _latchedMode = false; // RB toggle state (mouse mode)
     private bool _rbDown = false;      // RB press tracking
     private bool _injectPrev = false;  // previous inject state
 
@@ -63,21 +64,6 @@ public partial class App : System.Windows.Application
     [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     private const uint MOD_ALT = 0x0001, MOD_CONTROL = 0x0002, MOD_SHIFT = 0x0004, MOD_WIN = 0x0008;
     private const uint VK_F10 = 0x79;
-
-    // ===== COM for TabTip (touch keyboard) =====
-    [ComImport, Guid("37C994E7-432B-401B-91B1-63F5E5674A1F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface ITipInvocation { void Toggle(IntPtr hwnd); }
-    [ComImport, Guid("4CE576FA-83DC-4f88-951C-9D0782B4E376")]
-    private class TipInvocation { }
-
-    // ===== Win32 helpers for TabTip =====
-    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern IntPtr FindWindow(string lpClassName, string? lpWindowName);
-    [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
-    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-    private const int SW_SHOW = 5;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -121,7 +107,7 @@ public partial class App : System.Windows.Application
         _poller.OnStateEx += (lx, ly, rx, ry, buttons) =>
         {
             const ushort RB = 0x0200;
-            const ushort LB = 0x0100; // Left bumper -> touch keyboard
+            const ushort LB = 0x0100; // Left bumper -> touch keyboard (only when active)
             const ushort A = 0x1000;
             const ushort B = 0x2000;
             const ushort DPAD_UP = 0x0001;
@@ -129,7 +115,7 @@ public partial class App : System.Windows.Application
             const ushort DPAD_LEFT = 0x0004;
             const ushort DPAD_RIGHT = 0x0008;
 
-            // RB toggle on release edge
+            // RB toggle on release edge (enables/disables mouse mode)
             bool rbNow = (buttons & RB) != 0;
             bool rbWas = (_prevButtons & RB) != 0;
             if (rbNow && !rbWas) _rbDown = true;
@@ -143,26 +129,25 @@ public partial class App : System.Windows.Application
                 _rbDown = false;
             }
 
-            // LB → show/toggle touch keyboard on release (300ms debounce)
+            // ACTIVE = master enabled AND latched mouse mode (after RB logic)
+            bool activeNow = _enabled && _latchedMode;
+
+            // LB → show/toggle Touch Keyboard ONLY when active (release edge, 300ms debounce)
             bool lbNow = (buttons & LB) != 0;
             bool lbWas = (_prevButtons & LB) != 0;
-            if (!lbNow && lbWas)
+            if (activeNow && !lbNow && lbWas)
             {
-                long now = Stopwatch.GetTimestamp();
-                double since = (now - _lastKbTicks) / (double)Stopwatch.Frequency;
+                long nowTicks = Stopwatch.GetTimestamp();
+                double since = (nowTicks - _lastKbTicks) / (double)Stopwatch.Frequency;
                 if (since > 0.30)
                 {
-                    // REPLACE THIS LINE:
-                    // ShowTouchKeyboard();  or Dispatcher.BeginInvoke(() => ShowTouchKeyboard());
-
-                    // WITH THIS:
-                    Dispatcher.BeginInvoke(new Action(TouchKeyboard.ShowOrToggle));
-
-                    _lastKbTicks = now;
+                    try { Dispatcher.BeginInvoke(new Action(TouchKeyboard.ShowOrToggle)); } catch { }
+                    _lastKbTicks = nowTicks;
                 }
             }
 
-            bool injectNow = _enabled && _latchedMode;
+            // For movement/scroll injection, use the same "active" state
+            bool injectNow = activeNow;
 
             // Transitions
             if (!injectNow && _injectPrev)
@@ -402,64 +387,5 @@ public partial class App : System.Windows.Application
             Log.CloseAndFlush();
             base.OnExit(e);
         }
-    }
-
-    // ---- Touch keyboard launcher (COM TabTip preferred; no OSK fallback) ----
-    private void ShowTouchKeyboard()
-    {
-        // 1) COM toggle – pass the current foreground window (more reliable than IntPtr.Zero)
-        try
-        {
-            var inv = (ITipInvocation)new TipInvocation();
-            var hFg = GetForegroundWindow();
-            inv.Toggle(hFg != IntPtr.Zero ? hFg : _hotkeyHwnd);
-            Serilog.Log.Information("Touch keyboard: COM Toggle OK (hWnd={Handle})", hFg);
-            return;
-        }
-        catch (Exception ex)
-        {
-            Serilog.Log.Information("Touch keyboard: COM Toggle failed: {Msg}", ex.Message);
-        }
-
-        // 2) Launch TabTip.exe and attempt to surface its window
-        try
-        {
-            var common = Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles);
-            var tabtip = Path.Combine(common, "microsoft shared", "ink", "TabTip.exe");
-            if (File.Exists(tabtip))
-            {
-                Process.Start(new ProcessStartInfo(tabtip) { UseShellExecute = true });
-                Serilog.Log.Information("Touch keyboard: launched TabTip.exe");
-
-                // Wait briefly, then try to bring it to front if hidden
-                System.Threading.Tasks.Task.Run(() =>
-                {
-                    System.Threading.Thread.Sleep(600);
-                    var h = FindWindow("IPTip_Main_Window", null);
-                    if (h != IntPtr.Zero)
-                    {
-                        ShowWindow(h, SW_SHOW);
-                        SetForegroundWindow(h);
-                        Serilog.Log.Information("Touch keyboard: brought TabTip to foreground");
-                    }
-                    else
-                    {
-                        Serilog.Log.Warning("Touch keyboard: TabTip window not found after launch");
-                    }
-                });
-                return;
-            }
-            else
-            {
-                Serilog.Log.Warning("Touch keyboard: TabTip.exe not found");
-            }
-        }
-        catch (Exception ex)
-        {
-            Serilog.Log.Warning(ex, "Touch keyboard: TabTip launch failed");
-        }
-
-        // No OSK fallback by request; just log.
-        Serilog.Log.Warning("Touch keyboard: unable to show TabTip (no OSK fallback)");
     }
 }
