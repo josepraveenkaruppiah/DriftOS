@@ -7,6 +7,8 @@
 
         // Core
         public double Deadzone { get; set; } = 0.12;
+        public bool AutoStart { get; set; } = false;
+
 
         // New — v2
         public double PointerSpeed { get; set; } = 1.0; // scales cursor pixels/sec

@@ -1,34 +1,57 @@
 using System;
-using System.Diagnostics;
+using System.IO;
 using Microsoft.Win32;
 
-namespace DriftOS.App;
-
-public static class AutoStart
+namespace DriftOS.App
 {
-    private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string AppName = "DriftOS";
-
-    public static bool IsEnabled()
+    internal static class AutoStart
     {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: false);
-        var val = key?.GetValue(AppName) as string;
-        return !string.IsNullOrEmpty(val);
-    }
+        private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        private const string ValueName = "DriftOS";
 
-    public static void SetEnabled(bool enable)
-    {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true)
-                      ?? Registry.CurrentUser.CreateSubKey(RunKey)!;
+        public static bool IsEnabled()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: false);
+                var val = key?.GetValue(ValueName) as string;
+                return !string.IsNullOrWhiteSpace(val);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
-        if (enable)
+        public static void Apply(bool enable)
         {
-            var exe = Process.GetCurrentProcess().MainModule?.FileName ?? "";
-            key.SetValue(AppName, $"\"{exe}\"");
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true)
+                               ?? Registry.CurrentUser.CreateSubKey(RunKeyPath, true);
+
+                if (enable)
+                {
+                    var exe = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName
+                              ?? Path.Combine(AppContext.BaseDirectory, "DriftOS.App.exe");
+
+                    // Quote full path; no args needed.
+                    key.SetValue(ValueName, $"\"{exe}\"", RegistryValueKind.String);
+                }
+                else
+                {
+                    // Use positional arg to support all frameworks/param names.
+                    try { key.DeleteValue(ValueName, false); } catch { /* ignore if missing */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Warning(ex, "Failed to apply autostart setting (enable={Enable})", enable);
+            }
         }
-        else
-        {
-            key.DeleteValue(AppName, false);
-        }
+
+        // ---- Back-compat shims for older call sites ----
+        public static void SetEnabled(bool enable) => Apply(enable);
+        public static bool GetEnabled() => IsEnabled();
     }
 }

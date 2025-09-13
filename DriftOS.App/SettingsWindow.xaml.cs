@@ -61,6 +61,7 @@ namespace DriftOS.App
             try
             {
                 App.SettingsStore.Save(App.Settings);
+                AutoStart.Apply(App.Settings.AutoStart);
                 var path = JsonSettingsStore.ConfigPath;
                 Log.Information("Settings saved to {Path}", path);
                 System.Windows.MessageBox.Show($"Saved to:\n{path}", "DriftOS",

@@ -70,7 +70,14 @@
                    FontFamily="Consolas" TextAlignment="Right" VerticalAlignment="Center"/>
             </Grid>
 
-            <!-- Invert + deadzone -->
+			<!-- Autostart -->
+			<StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+				<CheckBox Content="Start with Windows"
+						  IsChecked="{Binding AutoStart, Mode=TwoWay}"
+						  Foreground="#EDEFF2"/>
+			</StackPanel>
+
+			<!-- Invert + deadzone -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
                 <CheckBox Content="Invert Vertical Scroll"
                   IsChecked="{Binding InvertScrollV, Mode=TwoWay}"

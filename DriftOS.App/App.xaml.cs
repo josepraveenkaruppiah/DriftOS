@@ -3,6 +3,8 @@ using System.Diagnostics;   // Stopwatch
 using System.IO;
 using System.Threading;     // Mutex
 using System.Windows;       // WPF
+using System.Runtime.InteropServices;
+using System.Windows.Interop; // HwndSource
 using DriftOS.Core.IO;
 using DriftOS.Core.Settings;
 using DriftOS.Input.XInput;
@@ -12,28 +14,31 @@ namespace DriftOS.App;
 
 public partial class App : System.Windows.Application
 {
+    // ----- Settings & persistence -----
     public static ISettingsStore SettingsStore { get; private set; } = null!;
     public static SettingsModel Settings { get; private set; } = null!;
 
+    // ----- Core services -----
     private XInputPoller? _poller;
     private IMouseOutput? _mouse;
     private TrayIconService? _tray;
 
-    private bool _enabled = true;
-    private bool _latchedMode = false;
-    private bool _rbDown = false;
-    private bool _injectPrev = false;
+    // ----- State -----
+    private bool _enabled = true;      // master enable
+    private bool _latchedMode = false; // RB toggle state
+    private bool _rbDown = false;      // RB press tracking
+    private bool _injectPrev = false;  // previous inject state
 
     private bool _isLeftDown = false;
     private bool _isRightDown = false;
 
-    // Pointer movement
+    // Pointer movement accumulators/filters
     private long _lastTicks = 0;
     private double _filtVx = 0, _filtVy = 0;
     private double _accumX = 0, _accumY = 0;
     private const double MaxStepPx = 18;
 
-    // Scrolling
+    // Scrolling accumulators/filters
     private long _lastScrollTicks = 0;
     private double _filtSv = 0, _filtSh = 0;
     private double _accSv = 0, _accSh = 0;
@@ -41,11 +46,25 @@ public partial class App : System.Windows.Application
 
     private ushort _prevButtons = 0;
 
+    // Single-instance guard
     private Mutex? _singleInstanceMutex;
+
+    // ===== Global Hotkey support (Ctrl+Shift+F10) =====
+    private IntPtr _hotkeyHwnd = IntPtr.Zero;
+    private HwndSource? _hotkeySource;
+
+    private const int WM_HOTKEY = 0x0312;
+    private const int HOTKEY_ID_TOGGLE = 0xD051;
+
+    [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    private const uint MOD_ALT = 0x0001, MOD_CONTROL = 0x0002, MOD_SHIFT = 0x0004, MOD_WIN = 0x0008;
+    private const uint VK_F10 = 0x79;
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // Single-instance guard
+        // ---- Single-instance guard (before anything heavy) ----
         bool createdNew;
         _singleInstanceMutex = new Mutex(true, @"Global\DriftOS_SingleInstance", out createdNew);
         if (!createdNew)
@@ -56,7 +75,7 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        // Logging
+        // ---- Serilog to %APPDATA%\DriftOS\logs\driftos-YYYYMMDD.log ----
         var logsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "DriftOS", "logs", "driftos-.log");
@@ -65,11 +84,9 @@ public partial class App : System.Windows.Application
             .WriteTo.Async(a => a.File(logsPath, rollingInterval: RollingInterval.Day))
             .CreateLogger();
 
-        // Settings
+        // ---- Settings (load + migrate sane defaults) ----
         SettingsStore = new JsonSettingsStore();
         Settings = SettingsStore.Load();
-
-        // Migration / sane defaults
         if (Settings.PointerSpeed <= 0) Settings.PointerSpeed = Settings.Sensitivity > 0 ? Settings.Sensitivity : 1.0;
         if (Settings.ScrollSpeedV <= 0) Settings.ScrollSpeedV = Settings.PointerSpeed;
         if (Settings.ScrollSpeedH <= 0) Settings.ScrollSpeedH = Settings.PointerSpeed;
@@ -77,9 +94,11 @@ public partial class App : System.Windows.Application
         if (Settings.ScrollAlpha <= 0) Settings.ScrollAlpha = 0.50;
         if (Settings.ScrollGamma <= 0) Settings.ScrollGamma = 1.60;
 
+        // ---- IO backends ----
         _mouse = new SendInputMouseOutput();
         _poller = new XInputPoller(hz: 120);
 
+        // ---- Controller loop ----
         _poller.OnStateEx += (lx, ly, rx, ry, buttons) =>
         {
             const ushort RB = 0x0200;
@@ -90,7 +109,7 @@ public partial class App : System.Windows.Application
             const ushort DPAD_LEFT = 0x0004;
             const ushort DPAD_RIGHT = 0x0008;
 
-            // RB toggle on release
+            // RB toggle on release edge
             bool rbNow = (buttons & RB) != 0;
             bool rbWas = (_prevButtons & RB) != 0;
             if (rbNow && !rbWas) _rbDown = true;
@@ -109,6 +128,7 @@ public partial class App : System.Windows.Application
             // Transitions
             if (!injectNow && _injectPrev)
             {
+                // turning off: release any held buttons & reset integrators
                 if (_isLeftDown) { try { _mouse!.LeftUp(); } catch { } _isLeftDown = false; }
                 if (_isRightDown) { try { _mouse!.RightUp(); } catch { } _isRightDown = false; }
                 _accumX = _accumY = 0; _filtVx = _filtVy = 0;
@@ -116,6 +136,7 @@ public partial class App : System.Windows.Application
             }
             else if (injectNow && !_injectPrev)
             {
+                // turning on: reset timers/integrators
                 _lastTicks = Stopwatch.GetTimestamp();
                 _accumX = _accumY = 0; _filtVx = _filtVy = 0;
                 _filtSv = _filtSh = 0; _accSv = _accSh = 0; _lastScrollTicks = _lastTicks;
@@ -194,7 +215,7 @@ public partial class App : System.Windows.Application
 
             // Combined drives
             double vDrive = (-sy) + dV; // up = positive
-            double hDrive = (sx) + dH; // right = positive
+            double hDrive = (sx) + dH;  // right = positive
             vDrive = Math.Clamp(vDrive, -1, 1);
             hDrive = Math.Clamp(hDrive, -1, 1);
 
@@ -230,7 +251,7 @@ public partial class App : System.Windows.Application
                 _filtSv = _filtSh = 0; _accSv = _accSh = 0;
             }
 
-            // Clicks
+            // Clicks (A/B)
             bool aNow = (buttons & A) != 0;
             if (aNow && !_isLeftDown) { _mouse!.LeftDown(); _isLeftDown = true; }
             if (!aNow && _isLeftDown) { _mouse!.LeftUp(); _isLeftDown = false; }
@@ -244,7 +265,7 @@ public partial class App : System.Windows.Application
 
         _poller.Start();
 
-        // Tray
+        // ---- Tray ----
         _tray = new TrayIconService(enabled: _enabled);
         _tray.ShowInfo("DriftOS", "RB toggles mouse mode · Right stick scroll");
 
@@ -272,14 +293,10 @@ public partial class App : System.Windows.Application
 
         _tray.OpenSettingsRequested += () =>
         {
-            try
-            {
-                var win = new SettingsWindow();
-                win.Show();
-            }
+            try { new SettingsWindow().Show(); }
             catch (Exception ex)
             {
-                Serilog.Log.Error(ex, "Failed to open SettingsWindow");
+                Log.Error(ex, "Failed to open SettingsWindow");
                 System.Windows.MessageBox.Show(ex.ToString(), "Settings error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -287,6 +304,22 @@ public partial class App : System.Windows.Application
 
         _tray.ExitRequested += () => Shutdown();
 
+        // ---- Hotkey host window + registration ----
+        var parms = new HwndSourceParameters("DriftOS_HotkeyWnd")
+        {
+            WindowStyle = unchecked((int)0x80000000), // WS_POPUP
+            Width = 0,
+            Height = 0,
+            ParentWindow = IntPtr.Zero
+        };
+        _hotkeySource = new HwndSource(parms);
+        _hotkeySource.AddHook(WndProc);
+        _hotkeyHwnd = _hotkeySource.Handle;
+
+        bool ok = RegisterHotKey(_hotkeyHwnd, HOTKEY_ID_TOGGLE, MOD_CONTROL | MOD_SHIFT, VK_F10);
+        Log.Information("Register hotkey Ctrl+Shift+F10: {OK}", ok);
+
+        // ---- Timing init & banner ----
         _lastTicks = Stopwatch.GetTimestamp();
         _lastScrollTicks = _lastTicks;
 
@@ -296,17 +329,67 @@ public partial class App : System.Windows.Application
             Settings.PointerAlpha, Settings.ScrollAlpha, Settings.ScrollGamma);
     }
 
+    // Called by tray toggle & hotkey
+    private void ToggleEnabledFromAnywhere()
+    {
+        bool wasInjecting = _enabled && _latchedMode;
+        _enabled = !_enabled;
+        _tray?.SetEnabled(_enabled);
+
+        if (wasInjecting && !_enabled)
+        {
+            if (_isLeftDown) { try { _mouse!.LeftUp(); } catch { } _isLeftDown = false; }
+            if (_isRightDown) { try { _mouse!.RightUp(); } catch { } _isRightDown = false; }
+            _accumX = _accumY = 0; _filtVx = _filtVy = 0;
+            _filtSv = _filtSh = 0; _accSv = _accSh = 0; _lastScrollTicks = 0;
+            _injectPrev = false;
+            _tray?.ShowInfo("DriftOS", "Controller as mouse: OFF");
+        }
+        else
+        {
+            _tray?.ShowInfo("DriftOS", _enabled ? "Controller as mouse: ON" : "Controller as mouse: OFF");
+        }
+        Log.Information("Global toggle → {Enabled}", _enabled);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID_TOGGLE)
+        {
+            ToggleEnabledFromAnywhere();
+            handled = true;
+        }
+        return IntPtr.Zero;
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         try
         {
-            _poller?.Dispose();
-            SettingsStore.Save(Settings);
-            _tray?.Dispose();
-            try { _singleInstanceMutex?.ReleaseMutex(); } catch { }
-            _singleInstanceMutex?.Dispose();
+            // Persist settings
+            try { SettingsStore.Save(Settings); }
+            catch (Exception ex) { Log.Warning(ex, "Save on exit failed"); }
+
+            // Unregister global hotkey
+            if (_hotkeyHwnd != IntPtr.Zero)
+            {
+                try { UnregisterHotKey(_hotkeyHwnd, HOTKEY_ID_TOGGLE); }
+                catch (Exception ex) { Log.Warning(ex, "UnregisterHotKey failed"); }
+                _hotkeyHwnd = IntPtr.Zero;
+            }
+
+            // Dispose message-only window
+            if (_hotkeySource is not null)
+            {
+                try { _hotkeySource.RemoveHook(WndProc); } catch { /* ignore */ }
+                _hotkeySource.Dispose();
+                _hotkeySource = null;
+            }
         }
-        finally { Log.CloseAndFlush(); }
-        base.OnExit(e);
+        finally
+        {
+            Log.CloseAndFlush();
+            base.OnExit(e);
+        }
     }
 }
