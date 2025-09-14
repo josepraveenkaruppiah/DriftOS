@@ -24,6 +24,10 @@ public partial class App : System.Windows.Application
     private IMouseOutput? _mouse;
     private TrayIconService? _tray;
 
+    // Foreground/game watcher
+    private ForegroundWatcher? _fg;
+    private bool _gameActive = false;
+
     // ----- State -----
     private bool _enabled = true;      // master enable
     private bool _latchedMode = false; // RB toggle state (mouse mode)
@@ -99,6 +103,16 @@ public partial class App : System.Windows.Application
 
         try { AutoStart.Apply(Settings.AutoStart); } catch { }
 
+        // ---- Foreground/game watcher ----
+        _fg = new ForegroundWatcher(Settings);
+        _fg.StateChanged += (isGaming, exe, fullscreen) =>
+        {
+            _gameActive = isGaming;
+            _tray?.ShowInfo("DriftOS", isGaming
+                ? $"Paused for {(string.IsNullOrEmpty(exe) ? "app" : exe)}"
+                : "Resumed (desktop)");
+        };
+
         // ---- IO backends ----
         _mouse = new SendInputMouseOutput();
         _poller = new XInputPoller(hz: 120);
@@ -129,8 +143,8 @@ public partial class App : System.Windows.Application
                 _rbDown = false;
             }
 
-            // ACTIVE = master enabled AND latched mouse mode (after RB logic)
-            bool activeNow = _enabled && _latchedMode;
+            // ACTIVE = master enabled AND latched mouse mode AND not in game
+            bool activeNow = _enabled && _latchedMode && !_gameActive;
 
             // LB → show/toggle Touch Keyboard ONLY when active (release edge, 300ms debounce)
             bool lbNow = (buttons & LB) != 0;
@@ -331,7 +345,7 @@ public partial class App : System.Windows.Application
     // Called by tray toggle & hotkey
     private void ToggleEnabledFromAnywhere()
     {
-        bool wasInjecting = _enabled && _latchedMode;
+        bool wasInjecting = _enabled && _latchedMode && !_gameActive;
         _enabled = !_enabled;
         _tray?.SetEnabled(_enabled);
 
@@ -381,6 +395,8 @@ public partial class App : System.Windows.Application
                 _hotkeySource.Dispose();
                 _hotkeySource = null;
             }
+
+            try { _fg?.Dispose(); } catch { }
         }
         finally
         {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using DriftOS.Core.Settings;
@@ -15,159 +14,226 @@ namespace DriftOS.App
         public SettingsWindow()
         {
             InitializeComponent();
-            var s = App.Settings;
 
-            // Migrate legacy → v2 if needed
-            if (s.PointerSpeed <= 0) s.PointerSpeed = s.Sensitivity > 0 ? s.Sensitivity : 1.0;
-            if (s.ScrollSpeedV <= 0) s.ScrollSpeedV = s.PointerSpeed;
-            if (s.ScrollSpeedH <= 0) s.ScrollSpeedH = s.PointerSpeed;
-            if (s.PointerAlpha <= 0) s.PointerAlpha = 0.35;
-            if (s.ScrollAlpha <= 0) s.ScrollAlpha = 0.50;
-            if (s.ScrollGamma <= 0) s.ScrollGamma = 1.60;
-
-            _vm = new SettingsVM(s.PointerSpeed, s.ScrollSpeedV, s.ScrollSpeedH, s.InvertScrollV, s.InvertScrollH,
-                                 s.Deadzone, s.PointerAlpha, s.ScrollAlpha, s.ScrollGamma);
-            _vm.PropertyChanged += (_, __) =>
-            {
-                // LIVE apply to app settings
-                s.PointerSpeed = _vm.PointerSpeed;
-                s.ScrollSpeedV = _vm.ScrollSpeedV;
-                s.ScrollSpeedH = _vm.ScrollSpeedH;
-                s.InvertScrollV = _vm.InvertScrollV;
-                s.InvertScrollH = _vm.InvertScrollH;
-                s.Deadzone = _vm.Deadzone;
-                s.PointerAlpha = _vm.PointerAlpha;
-                s.ScrollAlpha = _vm.ScrollAlpha;
-                s.ScrollGamma = _vm.ScrollGamma;
-            };
+            // Build VM from current app settings
+            _vm = new SettingsVM();
             DataContext = _vm;
         }
 
-        private void OnRestoreDefaults(object sender, RoutedEventArgs e)
-        {
-            _vm.PointerSpeed = 1.00;
-            _vm.ScrollSpeedV = 1.00;
-            _vm.ScrollSpeedH = 1.00;
-            _vm.InvertScrollV = false;
-            _vm.InvertScrollH = false;
-            _vm.Deadzone = 0.12;
-            _vm.PointerAlpha = 0.35;
-            _vm.ScrollAlpha = 0.50;
-            _vm.ScrollGamma = 1.60;
-        }
-
+        // Save button (XAML: Click="OnSave")
         private void OnSave(object sender, RoutedEventArgs e)
         {
             try
             {
+                // Write VM -> model
+                _vm.ApplyToModel(App.Settings);
+
+                // Persist
                 App.SettingsStore.Save(App.Settings);
-                AutoStart.Apply(App.Settings.AutoStart);
-                var path = JsonSettingsStore.ConfigPath;
-                Log.Information("Settings saved to {Path}", path);
-                System.Windows.MessageBox.Show($"Saved to:\n{path}", "DriftOS",
+
+                // Side effects
+                try { AutoStart.Apply(App.Settings.AutoStart); } catch { /* best-effort */ }
+
+                Log.Information("Settings saved");
+                System.Windows.MessageBox.Show($"Saved to: {JsonSettingsStore.ConfigPath}", "Settings",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Failed to save settings:\n{ex.Message}", "DriftOS",
+                Log.Error(ex, "Failed to save settings");
+                System.Windows.MessageBox.Show(ex.ToString(), "Save failed",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
+        // Close/Cancel (XAML: Click="OnClose")
         private void OnClose(object sender, RoutedEventArgs e) => Close();
-    }
 
-    internal sealed class SettingsVM : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string? n = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-
-        private double _pointerSpeed, _scrollV, _scrollH, _deadzone, _pAlpha, _sAlpha, _sGamma;
-        private bool _invV, _invH;
-
-        public double PointerSpeed
+        // Restore Defaults (XAML: Click="OnRestoreDefaults")
+        private void OnRestoreDefaults(object sender, RoutedEventArgs e)
         {
-            get => _pointerSpeed;
-            set { if (Math.Abs(_pointerSpeed - value) > 0.0001) { _pointerSpeed = value; OnPropertyChanged(); } }
+            // Use model's constructor defaults so we stay in sync with codebase
+            var def = new SettingsModel();
+
+            // Core motion
+            _vm.PointerSpeed = def.PointerSpeed;
+            _vm.ScrollSpeedV = def.ScrollSpeedV;
+            _vm.ScrollSpeedH = def.ScrollSpeedH;
+
+            _vm.InvertScrollV = def.InvertScrollV;
+            _vm.InvertScrollH = def.InvertScrollH;
+
+            _vm.Deadzone = def.Deadzone;
+            _vm.PointerAlpha = def.PointerAlpha;
+            _vm.ScrollAlpha = def.ScrollAlpha;
+            _vm.ScrollGamma = def.ScrollGamma;
+
+            // Game-aware
+            _vm.PauseInFullscreenApps = def.PauseInFullscreenApps;
+            _vm.BlockedProcesses = def.BlockedProcesses ?? "";
+
+            // Startup
+            _vm.AutoStart = def.AutoStart;
+
+            System.Windows.MessageBox.Show("Defaults restored (not saved yet). Click Save to persist.",
+                "Defaults", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        public double ScrollSpeedV
+        // ---------------- VM ----------------
+        public class SettingsVM : INotifyPropertyChanged
         {
-            get => _scrollV;
-            set
+            public event PropertyChangedEventHandler? PropertyChanged;
+            private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+            private bool Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
             {
-                if (Math.Abs(_scrollV - value) > 0.0001)
-                {
-                    _scrollV = value; OnPropertyChanged();
-                    OnPropertyChanged(nameof(DisplayScrollSpeedV));
-                }
+                if (Equals(field, value)) return false;
+                field = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+                return true;
             }
-        }
 
-        public double ScrollSpeedH
-        {
-            get => _scrollH;
-            set
+            public SettingsVM()
             {
-                if (Math.Abs(_scrollH - value) > 0.0001)
-                {
-                    _scrollH = value; OnPropertyChanged();
-                    OnPropertyChanged(nameof(DisplayScrollSpeedH));
-                }
+                var s = App.Settings;
+
+                _pointerSpeed = s.PointerSpeed;
+                _scrollSpeedV = s.ScrollSpeedV;
+                _scrollSpeedH = s.ScrollSpeedH;
+
+                _invertScrollV = s.InvertScrollV;
+                _invertScrollH = s.InvertScrollH;
+
+                _deadzone = s.Deadzone;
+                _pointerAlpha = s.PointerAlpha;
+                _scrollAlpha = s.ScrollAlpha;
+                _scrollGamma = s.ScrollGamma;
+
+                _pauseInFullscreenApps = s.PauseInFullscreenApps;
+                _blockedProcesses = s.BlockedProcesses ?? "";
+
+                _autoStart = s.AutoStart;
             }
-        }
 
-        public bool InvertScrollV
-        {
-            get => _invV;
-            set { if (_invV != value) { _invV = value; OnPropertyChanged(); OnPropertyChanged(nameof(DisplayScrollSpeedV)); } }
-        }
+            // ----- Properties bound in XAML -----
 
-        public bool InvertScrollH
-        {
-            get => _invH;
-            set { if (_invH != value) { _invH = value; OnPropertyChanged(); OnPropertyChanged(nameof(DisplayScrollSpeedH)); } }
-        }
+            // Core motion
+            private double _pointerSpeed;
+            public double PointerSpeed
+            {
+                get => _pointerSpeed;
+                set { if (Set(ref _pointerSpeed, value)) { OnPropertyChanged(nameof(DisplayScrollSpeedV)); OnPropertyChanged(nameof(DisplayScrollSpeedH)); } }
+            }
 
-        public double Deadzone
-        {
-            get => _deadzone;
-            set { if (Math.Abs(_deadzone - value) > 0.0001) { _deadzone = value; OnPropertyChanged(); } }
-        }
+            private double _scrollSpeedV;
+            public double ScrollSpeedV
+            {
+                get => _scrollSpeedV;
+                set { if (Set(ref _scrollSpeedV, value)) OnPropertyChanged(nameof(DisplayScrollSpeedV)); }
+            }
 
-        public double PointerAlpha
-        {
-            get => _pAlpha;
-            set { if (Math.Abs(_pAlpha - value) > 0.0001) { _pAlpha = value; OnPropertyChanged(); } }
-        }
+            private double _scrollSpeedH;
+            public double ScrollSpeedH
+            {
+                get => _scrollSpeedH;
+                set { if (Set(ref _scrollSpeedH, value)) OnPropertyChanged(nameof(DisplayScrollSpeedH)); }
+            }
 
-        public double ScrollAlpha
-        {
-            get => _sAlpha;
-            set { if (Math.Abs(_sAlpha - value) > 0.0001) { _sAlpha = value; OnPropertyChanged(); } }
-        }
+            private bool _invertScrollV;
+            public bool InvertScrollV
+            {
+                get => _invertScrollV;
+                set => Set(ref _invertScrollV, value);
+            }
 
-        public double ScrollGamma
-        {
-            get => _sGamma;
-            set { if (Math.Abs(_sGamma - value) > 0.0001) { _sGamma = value; OnPropertyChanged(); } }
-        }
+            private bool _invertScrollH;
+            public bool InvertScrollH
+            {
+                get => _invertScrollH;
+                set => Set(ref _invertScrollH, value);
+            }
 
-        // ---- Computed display strings (bullet-proof, culture aware) ----
-        private static readonly CultureInfo Culture = CultureInfo.CurrentCulture;
-        public string DisplayScrollSpeedV => (InvertScrollV ? -ScrollSpeedV : ScrollSpeedV).ToString("F2", Culture);
-        public string DisplayScrollSpeedH => (InvertScrollH ? -ScrollSpeedH : ScrollSpeedH).ToString("F2", Culture);
+            private double _deadzone;
+            public double Deadzone
+            {
+                get => _deadzone;
+                set => Set(ref _deadzone, value);
+            }
 
-        public SettingsVM(double pointerSpeed, double scrollV, double scrollH, bool invV, bool invH,
-                          double deadzone, double pAlpha, double sAlpha, double sGamma)
-        {
-            _pointerSpeed = pointerSpeed;
-            _scrollV = scrollV;
-            _scrollH = scrollH;
-            _invV = invV; _invH = invH;
-            _deadzone = deadzone;
-            _pAlpha = pAlpha; _sAlpha = sAlpha; _sGamma = sGamma;
+            private double _pointerAlpha;
+            public double PointerAlpha
+            {
+                get => _pointerAlpha;
+                set => Set(ref _pointerAlpha, value);
+            }
+
+            private double _scrollAlpha;
+            public double ScrollAlpha
+            {
+                get => _scrollAlpha;
+                set => Set(ref _scrollAlpha, value);
+            }
+
+            private double _scrollGamma;
+            public double ScrollGamma
+            {
+                get => _scrollGamma;
+                set => Set(ref _scrollGamma, value);
+            }
+
+            // Game-aware auto-pause
+            private bool _pauseInFullscreenApps;
+            public bool PauseInFullscreenApps
+            {
+                get => _pauseInFullscreenApps;
+                set => Set(ref _pauseInFullscreenApps, value);
+            }
+
+            private string _blockedProcesses = "";
+            public string BlockedProcesses
+            {
+                get => _blockedProcesses;
+                set => Set(ref _blockedProcesses, value ?? "");
+            }
+
+            // Startup
+            private bool _autoStart;
+            public bool AutoStart
+            {
+                get => _autoStart;
+                set => Set(ref _autoStart, value);
+            }
+
+            // Readouts used by XAML labels
+            public string DisplayScrollSpeedV => FormatSigned(ScrollSpeedV);
+            public string DisplayScrollSpeedH => FormatSigned(ScrollSpeedH);
+
+            private static string FormatSigned(double v)
+            {
+                return (v >= 0 ? "+" : "") + v.ToString("0.00") + "x";
+            }
+
+            // Push VM -> SettingsModel
+            public void ApplyToModel(SettingsModel target)
+            {
+                target.PointerSpeed = PointerSpeed;
+                target.ScrollSpeedV = ScrollSpeedV;
+                target.ScrollSpeedH = ScrollSpeedH;
+
+                target.InvertScrollV = InvertScrollV;
+                target.InvertScrollH = InvertScrollH;
+
+                target.Deadzone = Deadzone;
+                target.PointerAlpha = PointerAlpha;
+                target.ScrollAlpha = ScrollAlpha;
+                target.ScrollGamma = ScrollGamma;
+
+                target.PauseInFullscreenApps = PauseInFullscreenApps;
+                target.BlockedProcesses = BlockedProcesses ?? "";
+
+                target.AutoStart = AutoStart;
+            }
         }
     }
 }

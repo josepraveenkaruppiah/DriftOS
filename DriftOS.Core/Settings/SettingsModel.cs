@@ -22,5 +22,12 @@
         public double PointerAlpha { get; set; } = 0.35; // 0..1 (EMA)
         public double ScrollAlpha { get; set; } = 0.50; // 0..1
         public double ScrollGamma { get; set; } = 1.60; // 1..2.5 (shallower → stronger mid-stick)
+
+        // Game-aware auto-pause
+        public bool PauseInFullscreenApps { get; set; } = true;
+        public string BlockedProcesses { get; set; } = ""; // e.g. "cs2.exe; eldenring.exe; *ue4*.exe"
+
+
+
     }
 }

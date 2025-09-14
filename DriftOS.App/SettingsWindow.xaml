@@ -153,7 +153,36 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- Buttons -->
+			<GroupBox Header="Game-Aware Auto-Pause" Margin="8" Foreground="White">
+				<StackPanel Margin="8" Orientation="Vertical" >
+
+					<CheckBox
+					  Content="Pause when a fullscreen app is active"
+					  IsChecked="{Binding PauseInFullscreenApps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					  Margin="0,0,0,8"/>
+
+					<TextBlock Text="Blocked processes (wildcards allowed; separated by ; or ,)"
+							   Margin="0,0,0,4" Opacity="0.8"/>
+
+					<TextBox
+					  Text="{Binding BlockedProcesses, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					  AcceptsReturn="True"
+					  TextWrapping="Wrap"
+					  MinLines="2"
+					  MaxLines="4"
+					  VerticalScrollBarVisibility="Auto"
+					  FontFamily="Consolas"
+      />
+					<TextBlock Margin="0,6,0,0" Opacity="0.7">
+						<Run Text="Examples: "/>
+						<Run Text="cs2.exe; eldenring.exe; *ue4*.exe"/>
+					</TextBlock>
+
+				</StackPanel>
+			</GroupBox>
+
+
+			<!-- Buttons -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Restore Defaults" Margin="0,0,8,0" Padding="10,6" Click="OnRestoreDefaults"/>
                 <Button Content="Save" Margin="0,0,8,0" Padding="14,6" Click="OnSave"/>
